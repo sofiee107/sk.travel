@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="首爾姊妹遊">
-    <title>旅の手帳｜首爾姊妹自由行</title>
+    <meta name="apple-mobile-web-app-title" content="旅の手帳">
+    <title>旅の手帳｜多趟旅行隨身小工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -17,16 +17,22 @@
 </head>
 <body class="bg-[#FDFBF7] pb-24">
     <div class="max-w-md mx-auto min-h-screen bg-[#FDFBF7] shadow-xl flex flex-col relative">
-        <!-- 頂部狀態列 -->
+        
+        <!-- 頂部狀態列：可點擊切換／新建旅行 -->
         <header class="bg-[#F8F4EC]/95 backdrop-blur-md px-4 pt-5 pb-3 border-b border-[#EFECE6] sticky top-0 z-30">
-            <div class="flex justify-between items-center">
-                <div>
-                    <span class="text-[11px] bg-[#E8927C]/15 text-[#D9775E] px-2.5 py-0.5 rounded-full font-medium">11/29 - 12/6 首爾 🇰🇷</span>
-                    <h1 class="text-xl font-bold text-[#3D3A36] mt-1 tracking-tight">旅の手帳｜姊妹首爾遊 ✈️</h1>
-                </div>
-                <div class="text-right">
-                    <span class="text-[11px] bg-[#E3EFE8] text-[#3E6B52] px-2.5 py-1 rounded-lg font-medium block">👭 我 & 姊姊</span>
-                    <span class="text-[10px] text-gray-400 mt-0.5 block">資料自動儲存</span>
+            <div class="flex justify-between items-center gap-2">
+                <button onclick="openTripModal()" class="text-left group flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span id="header-date-badge" class="text-[11px] bg-[#E8927C]/15 text-[#D9775E] px-2.5 py-0.5 rounded-full font-medium truncate">11/29 - 12/6</span>
+                        <span class="text-[10px] text-gray-400">點擊切換旅程 ▾</span>
+                    </div>
+                    <h1 id="header-trip-title" class="text-lg font-bold text-[#3D3A36] mt-1 tracking-tight truncate group-active:opacity-70">
+                        首爾姊妹自由行 🇰🇷
+                    </h1>
+                </button>
+                <div class="text-right shrink-0">
+                    <span id="header-buddies-badge" class="text-[11px] bg-[#E3EFE8] text-[#3E6B52] px-2.5 py-1 rounded-lg font-medium block">👭 我 & 姊姊</span>
+                    <span class="text-[10px] text-gray-400 mt-0.5 block">本機自動存檔</span>
                 </div>
             </div>
         </header>
@@ -36,24 +42,18 @@
             
             <!-- 分頁 1：每日行程 -->
             <section id="tab-itinerary" class="tab-content space-y-4">
-                <!-- Day 切換列 -->
-                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1" id="day-tabs">
-                    <button onclick="switchDay(1)" id="day-btn-1" class="day-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#E8927C] text-white shadow-sm">Day 1 (11/29) 明洞・首爾站</button>
-                    <button onclick="switchDay(2)" id="day-btn-2" class="day-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-[#EFECE6]">Day 2 (11/30) 聖水洞</button>
-                    <button onclick="switchDay(3)" id="day-btn-3" class="day-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-[#EFECE6]">Day 3 (12/1) 愛寶樂園</button>
-                    <button onclick="switchDay(4)" id="day-btn-4" class="day-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-[#EFECE6]">Day 4–8 (12/2–6) 待規劃</button>
-                </div>
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1" id="day-tabs"></div>
 
-                <!-- 初冬天氣卡片 -->
+                <!-- 天氣與地區卡片 -->
                 <div id="weather-card" class="bg-gradient-to-r from-[#EBF4FA] to-[#F5F9FC] rounded-2xl p-3.5 border border-[#DCEAF5] flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <span class="text-2xl">🧥</span>
+                        <span class="text-2xl" id="weather-icon">🧥</span>
                         <div>
-                            <p class="text-xs font-bold text-[#3A5A78]" id="weather-loc">首爾 11月底初冬 ・ -1°C ~ 7°C</p>
-                            <p class="text-[11px] text-[#5C7C99]" id="weather-tip">早晚偏冷・建議發熱衣＋羽絨/大衣＋暖暖包</p>
+                            <p class="text-xs font-bold text-[#3A5A78]" id="weather-loc">首爾・初冬氣候</p>
+                            <p class="text-[11px] text-[#5C7C99]" id="weather-tip">早晚偏冷・建議洋蔥式穿搭</p>
                         </div>
                     </div>
-                    <span class="text-[10px] bg-white/80 text-[#3A5A78] px-2 py-1 rounded-lg font-medium">乾燥晴朗</span>
+                    <button onclick="addNewDay()" class="text-[10px] bg-white/90 text-[#3A5A78] px-2.5 py-1.5 rounded-lg font-bold shadow-xs shrink-0">+ 新增天數</button>
                 </div>
 
                 <!-- 行程卡片列表 -->
@@ -63,25 +63,53 @@
             <!-- 分頁 2：購物清單 -->
             <section id="tab-shopping" class="tab-content hidden space-y-4">
                 <div class="flex gap-2">
-                    <input type="text" id="shop-search" oninput="renderShopping()" placeholder="🔍 搜尋商品或商店 (如：唇膏、Daiso、樂天)..." class="flex-1 bg-white border border-[#EFECE6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-[#E8927C]">
+                    <input type="text" id="shop-search" oninput="renderShopping()" placeholder="🔍 搜尋商品或商店 (如：唇膏、Daiso、藥妝)..." class="flex-1 bg-white border border-[#EFECE6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-[#E8927C]">
                 </div>
-                <div class="flex gap-1.5 overflow-x-auto hide-scrollbar" id="shop-filters">
-                    <button onclick="setShopFilter('全部')" class="shop-filter-btn px-3 py-1 rounded-full text-[11px] font-bold bg-[#3D3A36] text-white">全部</button>
-                    <button onclick="setShopFilter('Daiso 大創')" class="shop-filter-btn px-3 py-1 rounded-full text-[11px] font-bold bg-white text-gray-500 border border-[#EFECE6]">Daiso 大創</button>
-                    <button onclick="setShopFilter('Olive Young')" class="shop-filter-btn px-3 py-1 rounded-full text-[11px] font-bold bg-white text-gray-500 border border-[#EFECE6]">Olive Young</button>
-                    <button onclick="setShopFilter('樂天超市')" class="shop-filter-btn px-3 py-1 rounded-full text-[11px] font-bold bg-white text-gray-500 border border-[#EFECE6]">樂天超市</button>
-                    <button onclick="setShopFilter('聖水洞潮牌')" class="shop-filter-btn px-3 py-1 rounded-full text-[11px] font-bold bg-white text-gray-500 border border-[#EFECE6]">聖水洞潮牌</button>
-                </div>
+                <div class="flex gap-1.5 overflow-x-auto hide-scrollbar" id="shop-filters"></div>
                 <div id="shopping-list" class="space-y-2.5"></div>
             </section>
 
-            <!-- 分頁 3：分帳記帳 (HKD 港幣版) -->
+            <!-- 分頁 3：多幣別分帳記帳 -->
             <section id="tab-expense" class="tab-content hidden space-y-4">
-                <!-- 姊妹分帳結算看板 -->
+                
+                <!-- 貨幣與匯率設定面板 -->
+                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-[#3D3A36]">💱 幣別與匯率設定 (對港幣 HKD)</h3>
+                        <button onclick="fetchLiveRate()" id="fetch-rate-btn" class="text-[11px] bg-[#EBF4FA] text-[#3A5A78] px-2.5 py-1 rounded-lg font-bold active:scale-95 transition">
+                            🔄 自動更新匯率
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">當地外幣選擇</label>
+                            <select id="exp-currency-select" onchange="changeTripCurrency()" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs font-bold">
+                                <option value="KRW">🇰🇷 韓幣 (KRW ₩)</option>
+                                <option value="JPY">🇯🇵 日圓 (JPY ¥)</option>
+                                <option value="TWD">🇹🇼 台幣 (TWD NT$)</option>
+                                <option value="THB">🇹🇭 泰銖 (THB ฿)</option>
+                                <option value="EUR">🇪🇺 歐元 (EUR €)</option>
+                                <option value="USD">🇺🇸 美元 (USD $)</option>
+                                <option value="GBP">🇬🇧 英鎊 (GBP £)</option>
+                                <option value="CNY">🇨🇳 人民幣 (CNY ¥)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">匯率模式 (1 外幣 = ? HKD)</label>
+                            <div class="flex items-center gap-1">
+                                <input type="number" step="0.0001" id="exp-rate-input" onchange="setManualRate()" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-[#3D3A36]">
+                            </div>
+                        </div>
+                    </div>
+                    <p id="rate-status-text" class="text-[10px] text-gray-400">目前使用：預設/固定匯率 (1 KRW = 0.0056 HKD)</p>
+                </div>
+
+                <!-- 旅伴分帳結算看板 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-sm font-bold text-[#3D3A36]">⚖️ 我 & 姊姊 分帳結算</h3>
-                        <span class="text-[10px] text-gray-400">參考匯率：₩1,000 ≈ HK$5.6</span>
+                        <h3 class="text-sm font-bold text-[#3D3A36]">⚖️ 同行旅伴分帳結算</h3>
+                        <button onclick="addBuddyToTrip()" class="text-[11px] text-[#E8927C] font-bold">+ 新增旅伴</button>
                     </div>
                     <div id="settlement-box" class="bg-[#FDFBF7] rounded-xl p-3 border border-[#EFECE6] text-xs space-y-1"></div>
                 </div>
@@ -90,16 +118,13 @@
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
                     <h3 class="text-sm font-bold text-[#3D3A36]">✍️ 新增消費紀錄</h3>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="exp-title" placeholder="項目 (如：雪濃湯)" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                        <input type="number" id="exp-amount" placeholder="韓幣金額 (KRW)" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                        <input type="text" id="exp-title" placeholder="項目 (如：晚餐/車票)" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                        <input type="number" id="exp-amount" placeholder="外幣金額" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <select id="exp-payer" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                            <option value="我">💳 我 先墊付</option>
-                            <option value="姊姊">💳 姊姊 先墊付</option>
-                        </select>
+                        <select id="exp-payer" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs"></select>
                         <select id="exp-split" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                            <option value="all">👭 兩人平分 (50/50)</option>
+                            <option value="all">👥 全員平分</option>
                             <option value="solo">🙋 各自負擔 (不分帳)</option>
                         </select>
                     </div>
@@ -110,36 +135,15 @@
                 <div id="expense-list" class="space-y-2"></div>
             </section>
 
-            <!-- 分頁 4：隨身工具（航班、行李清單、緊急電話） -->
+            <!-- 分頁 4：智慧自動分類行李清單 ＋ 航班工具 -->
             <section id="tab-tools" class="tab-content hidden space-y-4">
                 
-                <!-- ✈️ 大韓航空航班資訊 -->
-                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
-                    <h3 class="text-sm font-bold text-[#3D3A36]">✈️ 大韓航空航班 (Korean Air)</h3>
-                    <div class="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6] text-xs space-y-2">
-                        <div class="flex justify-between items-center border-b border-[#EFECE6] pb-2">
-                            <div>
-                                <span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">去程 11/29 (週日)</span>
-                                <p class="font-bold text-[#3D3A36] mt-1">香港 (HKG) → 首爾仁川 (ICN)</p>
-                            </div>
-                            <span class="text-[#E8927C] font-bold">凌晨機出發</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">回程 12/6 (週日)</span>
-                                <p class="font-bold text-[#3D3A36] mt-1">首爾仁川 (ICN) → 香港 (HKG)</p>
-                            </div>
-                            <span class="text-[#3A5A78] font-bold">晚上機回港</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 🧳 11月底首爾行李準備清單 -->
+                <!-- 🧳 智慧自動分類行李清單 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <div>
-                            <h3 class="text-sm font-bold text-[#3D3A36]">🧳 初冬首爾行李清單</h3>
-                            <p class="text-[11px] text-gray-400" id="luggage-progress-text">已完成 0 / 0 項</p>
+                            <h3 class="text-sm font-bold text-[#3D3A36]">🧳 智慧行李準備清單</h3>
+                            <p class="text-[11px] text-gray-400" id="luggage-progress-text">已收拾 0 / 0 項</p>
                         </div>
                         <button onclick="resetLuggage()" class="text-[11px] text-gray-400 underline">重置勾選</button>
                     </div>
@@ -148,27 +152,38 @@
                         <div id="luggage-progress-bar" class="bg-[#7FB093] h-full transition-all duration-300" style="width: 0%"></div>
                     </div>
 
-                    <div class="flex gap-1.5">
-                        <select id="luggage-cat" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2 py-2 text-xs text-gray-600">
-                            <option value="證件錢財">🛂 證件</option>
-                            <option value="保暖衣物">🧥 保暖</option>
-                            <option value="3C電子">🔌 3C</option>
-                            <option value="藥品護膚">🧴 護膚</option>
-                        </select>
-                        <input type="text" id="luggage-input" placeholder="新增必帶物品..." class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                        <button onclick="addLuggageItem()" class="bg-[#7FB093] text-white px-3.5 py-2 rounded-xl text-xs font-bold">新增</button>
+                    <!-- 輸入物品即自動分類 -->
+                    <div class="space-y-1.5">
+                        <div class="flex gap-1.5">
+                            <input type="text" id="luggage-input" onkeydown="if(event.key==='Enter') addLuggageItem()" placeholder="輸入物品名稱，自動幫你分類 (如：充電線、護照)..." class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7FB093]">
+                            <button onclick="addLuggageItem()" class="bg-[#7FB093] text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0">加入</button>
+                        </div>
+                        <p class="text-[10px] text-gray-400">✨ 支援自動分類：證件錢財、保暖衣物、3C電子、洗漱護膚、常備藥品</p>
                     </div>
 
-                    <div id="luggage-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+                    <!-- 行李分類篩選標籤 -->
+                    <div class="flex gap-1.5 overflow-x-auto hide-scrollbar" id="luggage-cat-filters"></div>
+
+                    <!-- 行李分組清單 -->
+                    <div id="luggage-list" class="space-y-3 max-h-80 overflow-y-auto pr-1"></div>
                 </div>
 
-                <!-- 🆘 韓國緊急聯絡電話 -->
+                <!-- ✈️ 航班與住宿備忘 -->
+                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-[#3D3A36]">✈️ 航班與住宿資訊</h3>
+                        <button onclick="editFlightNote()" class="text-[11px] text-[#E8927C] font-bold">✏️ 編輯</button>
+                    </div>
+                    <div id="flight-info-box" class="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6] text-xs space-y-1.5 whitespace-pre-line text-gray-700 leading-relaxed"></div>
+                </div>
+
+                <!-- 🆘 緊急聯絡電話 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2">
-                    <h3 class="text-sm font-bold text-[#3D3A36]">🆘 韓國緊急聯絡電話</h3>
+                    <h3 class="text-sm font-bold text-[#3D3A36]">🆘 當地緊急聯絡電話</h3>
                     <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                        <a href="tel:112" class="bg-red-50 text-red-700 p-2.5 rounded-xl font-bold border border-red-100">🚔 報警<br>112</a>
+                        <a href="tel:112" class="bg-red-50 text-red-700 p-2.5 rounded-xl font-bold border border-red-100">🚔 報警<br>112 / 110</a>
                         <a href="tel:119" class="bg-orange-50 text-orange-700 p-2.5 rounded-xl font-bold border border-orange-100">🚑 救護<br>119</a>
-                        <a href="tel:1330" class="bg-blue-50 text-blue-700 p-2.5 rounded-xl font-bold border border-blue-100">🗣️ 旅遊翻譯<br>1330</a>
+                        <a href="tel:1330" class="bg-blue-50 text-blue-700 p-2.5 rounded-xl font-bold border border-blue-100">🗣️ 旅客熱線<br>1330</a>
                     </div>
                 </div>
             </section>
@@ -179,15 +194,50 @@
             <span>✨</span> AI 導遊助手
         </button>
 
+        <!-- 🗂️ 我的旅行檔案庫 Modal (切換／新建／刪除旅行) -->
+        <div id="trip-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
+            <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-[#EFECE6] pb-3">
+                    <h3 class="text-base font-bold text-[#3D3A36]">🗂️ 我的旅行檔案庫</h3>
+                    <button onclick="closeTripModal()" class="text-gray-400 text-lg font-bold">✕</button>
+                </div>
+
+                <!-- 歷史與現有旅行列表 -->
+                <div class="space-y-2">
+                    <p class="text-[11px] font-bold text-gray-400">點選切換旅行（所有舊紀錄皆完整保留）：</p>
+                    <div id="trip-list-container" class="space-y-2"></div>
+                </div>
+
+                <!-- 新建一趟旅行表單 -->
+                <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-[#EFECE6] space-y-2.5">
+                    <h4 class="text-xs font-bold text-[#E8927C]">➕ 開啟一趟全新旅行</h4>
+                    <input type="text" id="new-trip-title" placeholder="旅行名稱 (例：東京櫻花之旅 🌸)" class="w-full bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="new-trip-dates" placeholder="日期 (例：2027/04/01 - 04/06)" class="bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                        <select id="new-trip-currency" class="bg-white border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs">
+                            <option value="JPY">🇯🇵 日本 (JPY 日圓)</option>
+                            <option value="KRW">🇰🇷 韓國 (KRW 韓幣)</option>
+                            <option value="TWD">🇹🇼 台灣 (TWD 台幣)</option>
+                            <option value="THB">🇹🇭 泰國 (THB 泰銖)</option>
+                            <option value="EUR">🇪🇺 歐洲 (EUR 歐元)</option>
+                            <option value="USD">🇺🇸 美國 (USD 美元)</option>
+                        </select>
+                    </div>
+                    <input type="text" id="new-trip-buddies" placeholder="同行旅伴，用逗號分隔 (例：我, 姊姊)" value="我, 姊姊" class="w-full bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                    <button onclick="createNewTrip()" class="w-full bg-[#3D3A36] text-white font-bold text-xs py-2.5 rounded-xl shadow-sm active:scale-95 transition">✨ 建立並進入新旅程</button>
+                </div>
+            </div>
+        </div>
+
         <!-- AI 導遊彈窗 -->
         <div id="ai-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
             <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3 shadow-2xl">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-[#3D3A36]">✨ AI 隨身導遊・新增行程或購物</h3>
+                    <h3 class="text-sm font-bold text-[#3D3A36]">✨ AI 隨身導遊・一鍵新增</h3>
                     <button onclick="toggleAIModal()" class="text-gray-400 text-lg font-bold">✕</button>
                 </div>
-                <p class="text-[11px] text-gray-500">想到第 4～8 天要去哪裡，或想買什麼，直接輸入即可加入目前頁面：</p>
-                <textarea id="ai-input" rows="3" placeholder="例如：「景福宮穿韓服＋土俗村蔘雞湯」或「Olive Young 護手霜 8000韓幣」..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs focus:outline-none focus:border-[#E8927C]"></textarea>
+                <p class="text-[11px] text-gray-500">輸入想去的景點、餐廳或購物清單，自動加入目前這趟旅行：</p>
+                <textarea id="ai-input" rows="3" placeholder="例如：「一蘭拉麵 渋谷店」或「松本清 眼藥水 800日圓」..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs focus:outline-none focus:border-[#E8927C]"></textarea>
                 <div class="flex gap-2">
                     <button onclick="processAIInput('itinerary')" class="flex-1 bg-[#E8927C] text-white py-2.5 rounded-xl text-xs font-bold">➕ 加入目前天數行程</button>
                     <button onclick="processAIInput('shopping')" class="flex-1 bg-[#7FB093] text-white py-2.5 rounded-xl text-xs font-bold">🛍️ 加入購物清單</button>
@@ -204,58 +254,122 @@
                 <span class="text-lg mb-0.5">🛍️</span>購物清單
             </button>
             <button onclick="switchTab('expense')" id="nav-expense" class="nav-btn flex flex-col items-center text-gray-400 text-[11px] font-medium">
-                <span class="text-lg mb-0.5">💰</span>姊妹分帳
+                <span class="text-lg mb-0.5">💰</span>分帳記帳
             </button>
             <button onclick="switchTab('tools')" id="nav-tools" class="nav-btn flex flex-col items-center text-gray-400 text-[11px] font-medium">
-                <span class="text-lg mb-0.5">🧳</span>航班/行李
+                <span class="text-lg mb-0.5">🧳</span>行李/航班
             </button>
         </nav>
     </div>
 
     <script>
-        const RATE_HKD = 0.0056; // 1000 KRW ≈ 5.6 HKD
+        // 預設各國貨幣對港幣 (HKD) 參考匯率與符號
+        const CURRENCY_META = {
+            KRW: { symbol: '₩', name: '韓幣', defaultRate: 0.0056 },
+            JPY: { symbol: '¥', name: '日圓', defaultRate: 0.051 },
+            TWD: { symbol: 'NT$', name: '台幣', defaultRate: 0.24 },
+            THB: { symbol: '฿', name: '泰銖', defaultRate: 0.22 },
+            EUR: { symbol: '€', name: '歐元', defaultRate: 8.45 },
+            USD: { symbol: '$', name: '美元', defaultRate: 7.78 },
+            GBP: { symbol: '£', name: '英鎊', defaultRate: 9.85 },
+            CNY: { symbol: '¥', name: '人民幣', defaultRate: 1.08 }
+        };
 
-        const defaultData = {
-            currentDay: 1,
-            shopFilter: '全部',
+        // 第一趟預設旅行：2026/11/29 - 12/6 首爾姊妹自由行
+        const initialSeoulTrip = {
+            id: 'trip_seoul_2026',
+            title: '首爾姊妹自由行 🇰🇷',
+            dates: '2026/11/29 - 12/06',
+            currency: 'KRW',
+            rateToHKD: 0.0056,
+            rateMode: '固定/預設匯率',
             buddies: ['我', '姊姊'],
+            days: [
+                { day: 1, label: 'Day 1 (11/29) 明洞・首爾站', weather: '首爾・明洞/首爾站 0°C ~ 8°C', tip: '凌晨機抵達注意保暖・洋蔥式穿搭' },
+                { day: 2, label: 'Day 2 (11/30) 聖水洞', weather: '首爾・聖水洞 -1°C ~ 7°C', tip: '街拍好天氣・風大建議戴頸巾' },
+                { day: 3, label: 'Day 3 (12/1) 愛寶樂園', weather: '京畿道龍仁・愛寶樂園 -3°C ~ 5°C', tip: '山區氣溫更低・務必帶足暖暖包' },
+                { day: 4, label: 'Day 4–8 (12/2–6) 待規劃', weather: '首爾 12月初冬季 -2°C ~ 6°C', tip: '想到新行程隨時按右下角 AI 助手加入' }
+            ],
             itinerary: [
-                // Day 1: 11/29 明洞、首爾站
-                { day: 1, type: '交通/入住', time: '早上抵達', title: '仁川機場 → 首爾站/明洞放行李', location: '서울역', tags: ['AREX機場快線', '先寄放行李'], note: '搭凌晨大韓航空抵達後，可搭 AREX 直達列車到首爾站，再轉乘地鐵或的士前往飯店寄放行李。' },
-                { day: 1, type: '餐廳', time: '午餐/晚餐', title: '明洞神仙雪濃湯 ＆ 商圈換錢', location: '신선설농탕 명동점', tags: ['必吃美食', '清淡暖胃'], note: '必點菜單：招牌雪濃湯（坐紅眼班機後喝熱湯最暖胃）。順便到大使館前換錢所換韓幣。' },
-                { day: 1, type: '購物', time: '傍晚', title: '首爾站 樂天超市 (Lotte Mart)', location: '롯데마트 제타플렉스 서울역점', tags: ['必買伴手禮', '現場退稅'], note: '就在首爾站旁，可一次買齊零食與日用品，記得帶護照辦理現場退稅。' },
-
-                // Day 2: 11/30 聖水洞
-                { day: 2, type: '餐廳', time: '11:30', title: '聖水洞 祖傳三代馬鈴薯排骨湯', location: '소문난 성수 감자탕', tags: ['必吃美食', '排隊名店'], note: '必點菜單：招牌馬鈴薯排骨湯（一人份或小鍋）、最後加點炒飯，建議避開 12 點尖峰時段。' },
-                { day: 2, type: '景點/逛街', time: '下午', title: '聖水洞潮牌＆咖啡廳巡禮', location: '성수동 카페거리', tags: ['必逛潮牌', '打卡咖啡廳'], note: '推薦逛 Tamburins、Dior 聖水概念店、Mardi Mercredi 與周邊設計師選物店。' },
-
-                // Day 3: 12/1 愛寶樂園
-                { day: 3, type: '景點', time: '全日', title: '愛寶樂園 Everland 一日遊', location: '에버랜드', tags: ['主題樂園', '必看熊貓'], note: '推薦設施：木質過山車 T-Express、熊貓世界（看睿寶＆輝寶）。12月戶外極冷，務必貼滿暖暖包。' },
-
-                // Day 4-8: 12/2 - 12/6 待規劃
-                { day: 4, type: '行程規劃', time: '12/2 – 12/6', title: '尚待規劃（點擊右下角 ✨ AI 助手新增）', location: '서울', tags: ['自由彈性'], note: '目前 Day 4 至 Day 8 (12/6 晚上大韓航空回香港) 尚未安排，想到想去的景點或餐廳隨時按右下角「AI 導遊助手」加入！' }
+                { day: 1, type: '交通/入住', time: '早上抵達', title: '仁川機場 → 首爾站/明洞放行李', location: '서울역', tags: ['AREX機場快線', '先寄放行李'], note: '搭凌晨大韓航空抵達後，搭 AREX 到首爾站轉車前往飯店寄放行李。' },
+                { day: 1, type: '餐廳', time: '午餐/晚餐', title: '明洞神仙雪濃湯 ＆ 商圈換錢', location: '신선설농탕 명동점', tags: ['必吃美食', '清淡暖胃'], note: '必點菜單：招牌雪濃湯。順便到大使館前換錢所換韓幣。' },
+                { day: 1, type: '購物', time: '傍晚', title: '首爾站 樂天超市 (Lotte Mart)', location: '롯데마트 제타플렉스 서울역점', tags: ['必買伴手禮', '現場退稅'], note: '就在首爾站旁，記得帶護照辦理現場退稅。' },
+                { day: 2, type: '餐廳', time: '11:30', title: '聖水洞 祖傳三代馬鈴薯排骨湯', location: '소문난 성수 감자탕', tags: ['必吃美食', '排隊名店'], note: '必點菜單：招牌馬鈴薯排骨湯、最後加點炒飯。' },
+                { day: 2, type: '景點/逛街', time: '下午', title: '聖水洞潮牌＆咖啡廳巡禮', location: '성수동 카페거리', tags: ['必逛潮牌', '打卡咖啡廳'], note: '推薦逛 Tamburins、Dior 聖水概念店、Mardi Mercredi。' },
+                { day: 3, type: '景點', time: '全日', title: '愛寶樂園 Everland 一日遊', location: '에버랜드', tags: ['主題樂園', '必看熊貓'], note: '推薦設施：木質過山車 T-Express、熊貓世界。12月戶外極冷務必貼暖暖包。' },
+                { day: 4, type: '行程規劃', time: '12/2 – 12/6', title: '尚待規劃（點擊右下角 ✨ AI 助手新增）', location: '서울', tags: ['自由彈性'], note: 'Day 4 至 Day 8 (12/6 晚上大韓航空回香港) 尚未安排，隨時可新增！' }
             ],
             shopping: [
-                { id: 1, name: 'Daiso 凡士林保濕潤唇膏', store: 'Daiso 大創', priceKRW: 3000, desc: '韓國冬天必備高保濕唇膏', bought: false },
-                { id: 2, name: 'Torriden 玻尿酸保濕精華/面膜', store: 'Olive Young', priceKRW: 15000, desc: '韓國乾燥天氣救星，保濕力極佳', bought: false },
-                { id: 3, name: 'HBAF 蜂蜜奶油杏仁果', store: '樂天超市', priceKRW: 7500, desc: '首爾站樂天超市必買手信', bought: false }
+                { id: 1, name: 'Daiso 凡士林保濕潤唇膏', store: 'Daiso 大創', price: 3000, desc: '韓國冬天必備高保濕唇膏', bought: false },
+                { id: 2, name: 'Torriden 玻尿酸保濕面膜', store: 'Olive Young', price: 15000, desc: '韓國乾燥天氣救星', bought: false },
+                { id: 3, name: 'HBAF 蜂蜜奶油杏仁果', store: '樂天超市', price: 7500, desc: '首爾站樂天超市必買手信', bought: false }
             ],
             expenses: [],
             luggage: [
                 { id: 1, cat: '證件錢財', name: '特區護照（確認有效期 6 個月以上）', checked: false },
                 { id: 2, cat: '證件錢財', name: '大韓航空電子機票＋韓國 eSIM 網卡', checked: false },
-                { id: 3, cat: '證件錢財', name: '港幣現金（到明洞換韓幣）＋海外信用卡', checked: false },
-                { id: 4, cat: '保暖衣物', name: '長版羽絨 / 厚大衣 ＋ 發熱衣 (Heattech)', checked: false },
+                { id: 3, cat: '證件錢財', name: '港幣現金（明洞換錢）＋海外信用卡', checked: false },
+                { id: 4, cat: '保暖衣物', name: '長版羽絨 / 厚大衣 ＋ 發熱衣', checked: false },
                 { id: 5, cat: '保暖衣物', name: '暖暖包、頸巾、冷帽（愛寶樂園必備）', checked: false },
                 { id: 6, cat: '3C電子', name: '韓國雙圓孔轉接頭（220V）＋行動電源', checked: false },
-                { id: 7, cat: '藥品護膚', name: '高保濕面霜、潤唇膏、個人常備藥', checked: false }
-            ]
+                { id: 7, cat: '洗漱護膚', name: '高保濕面霜、潤唇膏', checked: false },
+                { id: 8, cat: '常備藥品', name: '腸胃藥、止痛藥、OK繃', checked: false }
+            ],
+            flightInfo: '✈️ 去程 11/29 (週日) 凌晨：大韓航空 香港 (HKG) → 首爾仁川 (ICN)\n✈️ 回程 12/06 (週日) 晚上：大韓航空 首爾仁川 (ICN) → 香港 (HKG)\n🏨 住宿：明洞 / 首爾站周邊飯店（可點右上角編輯補充訂房代號）'
         };
 
-        let appData = JSON.parse(localStorage.getItem('seoul_sisters_v1')) || defaultData;
+        // 總資料庫結構：支援多趟旅行切換與歷史保存
+        let store = JSON.parse(localStorage.getItem('travel_notebook_multi_v1')) || {
+            activeTripId: 'trip_seoul_2026',
+            trips: [initialSeoulTrip]
+        };
 
-        function saveData() {
-            localStorage.setItem('seoul_sisters_v1', JSON.stringify(appData));
+        let currentDay = 1;
+        let shopFilter = '全部';
+        let luggageCatFilter = '全部';
+
+        function getActiveTrip() {
+            return store.trips.find(t => t.id === store.activeTripId) || store.trips[0];
+        }
+
+        function saveStore() {
+            localStorage.setItem('travel_notebook_multi_v1', JSON.stringify(store));
+        }
+
+        // 智慧行李關鍵字自動分類引擎
+        function autoClassifyLuggage(itemName) {
+            const text = itemName.toLowerCase();
+            if (/護照|身分證|身份證|機票|簽證|現金|港幣|韓幣|日圓|信用卡|提款卡|保險|錢包|八達通|t-money|suica|sim|esim|網卡|退卡針/.test(text)) {
+                return '證件錢財';
+            }
+            if (/衣|褲|裙|外套|羽絨|大衣|發熱|heattech|鞋|襪|帽|頸巾|圍巾|手套|睡衣|內衣|內褲|暖暖包|墨鏡|太陽眼鏡/.test(text)) {
+                return '保暖衣物';
+            }
+            if (/充電|線|插頭|轉接|行動電源|尿袋|相機|電池|耳機|airpods|ipad|電腦|wifi|自拍棒|腳架/.test(text)) {
+                return '3C電子';
+            }
+            if (/洗面|牙刷|牙膏|毛巾|化妝|卸妝|防曬|面霜|乳液|護手霜|唇膏|護唇|隱形眼鏡|眼鏡|梳|吹風機|直髮夾|香水/.test(text)) {
+                return '洗漱護膚';
+            }
+            if (/藥|止痛|腸胃|感冒|暈車|ok繃|膠布|維他命|眼藥水|口罩|酒精|濕紙巾/.test(text)) {
+                return '常備藥品';
+            }
+            return '隨身其他';
+        }
+
+        // 渲染頂部資訊與各分頁
+        function renderAll() {
+            const trip = getActiveTrip();
+            document.getElementById('header-date-badge').innerText = trip.dates;
+            document.getElementById('header-trip-title').innerText = trip.title;
+            document.getElementById('header-buddies-badge').innerText = `👥 ${trip.buddies.join(' & ')}`;
+
+            renderDayTabs();
+            renderItinerary();
+            renderShopping();
+            renderExpenseSection();
+            renderLuggage();
+            document.getElementById('flight-info-box').innerText = trip.flightInfo || '尚未填寫航班與住宿資訊，點擊右上角「編輯」新增。';
         }
 
         function switchTab(tabName) {
@@ -270,29 +384,50 @@
             activeBtn.classList.add('text-[#E8927C]', 'font-bold');
         }
 
+        // --- 行程渲染 ---
+        function renderDayTabs() {
+            const trip = getActiveTrip();
+            if (!trip.days.some(d => d.day === currentDay)) currentDay = trip.days[0]?.day || 1;
+            const container = document.getElementById('day-tabs');
+            container.innerHTML = trip.days.map(d => `
+                <button onclick="switchDay(${d.day})" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition ${d.day === currentDay ? 'bg-[#E8927C] text-white shadow-sm' : 'bg-white text-gray-500 border border-[#EFECE6]'}">
+                    ${d.label}
+                </button>
+            `).join('');
+
+            const activeDayObj = trip.days.find(d => d.day === currentDay) || trip.days[0];
+            if (activeDayObj) {
+                document.getElementById('weather-loc').innerText = activeDayObj.weather;
+                document.getElementById('weather-tip').innerText = activeDayObj.tip;
+            }
+        }
+
         function switchDay(day) {
-            appData.currentDay = day;
-            document.querySelectorAll('.day-btn').forEach((btn, idx) => {
-                if (idx + 1 === day) {
-                    btn.className = 'day-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#E8927C] text-white shadow-sm';
-                } else {
-                    btn.className = 'day-btn shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-[#EFECE6]';
-                }
-            });
-            const weatherMap = {
-                1: ['首爾・明洞/首爾站 0°C ~ 8°C', '凌晨機抵達注意保暖・洋蔥式穿搭'],
-                2: ['首爾・聖水洞 -1°C ~ 7°C', '街拍好天氣・風大建議戴頸巾'],
-                3: ['京畿道龍仁・愛寶樂園 -3°C ~ 5°C', '山區氣溫更低・務必帶足暖暖包'],
-                4: ['首爾 12月初冬季 -2°C ~ 6°C', '可隨時規劃室內逛街或咖啡廳行程']
-            };
-            document.getElementById('weather-loc').innerText = weatherMap[day][0];
-            document.getElementById('weather-tip').innerText = weatherMap[day][1];
+            currentDay = day;
+            renderDayTabs();
+            renderItinerary();
+        }
+
+        function addNewDay() {
+            const trip = getActiveTrip();
+            const nextNum = trip.days.length + 1;
+            const label = prompt('請輸入新天數標題（例如：Day 5 弘大・延南洞）：', `Day ${nextNum} 自由探索`);
+            if (!label) return;
+            trip.days.push({ day: nextNum, label, weather: `${trip.title} ・ 天氣晴朗`, tip: '祝旅途愉快！' });
+            currentDay = nextNum;
+            saveStore();
+            renderDayTabs();
             renderItinerary();
         }
 
         function renderItinerary() {
+            const trip = getActiveTrip();
             const list = document.getElementById('itinerary-list');
-            const items = appData.itinerary.filter(i => i.day === appData.currentDay);
+            const items = trip.itinerary.filter(i => i.day === currentDay);
+            if (items.length === 0) {
+                list.innerHTML = `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">這一天還沒有安排行程，點擊右下角「✨ AI 導遊助手」新增景點或餐廳吧！</div>`;
+                return;
+            }
             list.innerHTML = items.map(item => `
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2">
                     <div class="flex justify-between items-start gap-2">
@@ -301,7 +436,7 @@
                             <h3 class="text-sm font-bold text-[#3D3A36] mt-1">${item.title}</h3>
                         </div>
                         <a href="https://map.naver.com/v5/search/${encodeURIComponent(item.location)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shadow-xs shrink-0">
-                            🧭 Naver 導航
+                            🧭 地圖導航
                         </a>
                     </div>
                     <div class="flex flex-wrap gap-1">
@@ -312,26 +447,33 @@
             `).join('');
         }
 
-        function setShopFilter(store) {
-            appData.shopFilter = store;
-            document.querySelectorAll('.shop-filter-btn').forEach(btn => {
-                if (btn.innerText === store) {
-                    btn.className = 'shop-filter-btn shrink-0 px-3 py-1 rounded-full text-[11px] font-bold bg-[#3D3A36] text-white';
-                } else {
-                    btn.className = 'shop-filter-btn shrink-0 px-3 py-1 rounded-full text-[11px] font-bold bg-white text-gray-500 border border-[#EFECE6]';
-                }
-            });
+        // --- 購物清單渲染 ---
+        function setShopFilter(storeName) {
+            shopFilter = storeName;
             renderShopping();
         }
 
         function renderShopping() {
+            const trip = getActiveTrip();
+            const meta = CURRENCY_META[trip.currency] || CURRENCY_META.KRW;
+            const stores = ['全部', ...new Set(trip.shopping.map(s => s.store))];
+            
+            document.getElementById('shop-filters').innerHTML = stores.map(st => `
+                <button onclick="setShopFilter('${st}')" class="shrink-0 px-3 py-1 rounded-full text-[11px] font-bold ${shopFilter === st ? 'bg-[#3D3A36] text-white' : 'bg-white text-gray-500 border border-[#EFECE6]'}">${st}</button>
+            `).join('');
+
             const query = document.getElementById('shop-search').value.toLowerCase();
-            const list = document.getElementById('shopping-list');
-            const filtered = appData.shopping.filter(item => {
-                const matchStore = appData.shopFilter === '全部' || item.store === appData.shopFilter;
+            const filtered = trip.shopping.filter(item => {
+                const matchStore = shopFilter === '全部' || item.store === shopFilter;
                 const matchText = item.name.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query) || item.store.toLowerCase().includes(query);
                 return matchStore && matchText;
             });
+
+            const list = document.getElementById('shopping-list');
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">目前購物清單是空的，按右下角「✨ AI 導遊助手」新增想買的伴手禮吧！</div>`;
+                return;
+            }
 
             list.innerHTML = filtered.map(item => `
                 <div onclick="toggleShopItem(${item.id})" class="bg-white rounded-2xl p-3.5 border border-[#EFECE6] shadow-sm flex items-center justify-between cursor-pointer ${item.bought ? 'opacity-50' : ''}">
@@ -344,93 +486,181 @@
                         </div>
                     </div>
                     <div class="text-right shrink-0 ml-2">
-                        <p class="text-xs font-bold text-[#E8927C]">₩${item.priceKRW.toLocaleString()}</p>
-                        <p class="text-[10px] text-gray-400">≈ HK$${Math.round(item.priceKRW * RATE_HKD)}</p>
+                        <p class="text-xs font-bold text-[#E8927C]">${meta.symbol}${item.price.toLocaleString()}</p>
+                        <p class="text-[10px] text-gray-400">≈ HK$${Math.round(item.price * trip.rateToHKD)}</p>
                     </div>
                 </div>
             `).join('');
         }
 
         function toggleShopItem(id) {
-            const item = appData.shopping.find(i => i.id === id);
+            const trip = getActiveTrip();
+            const item = trip.shopping.find(i => i.id === id);
             if (item) item.bought = !item.bought;
-            saveData();
+            saveStore();
             renderShopping();
         }
 
-        function renderExpenses() {
-            let paidMe = 0, paidSis = 0, shareMe = 0, shareSis = 0;
+        // --- 多幣別記帳與匯率 ---
+        function changeTripCurrency() {
+            const trip = getActiveTrip();
+            const newCurr = document.getElementById('exp-currency-select').value;
+            trip.currency = newCurr;
+            trip.rateToHKD = CURRENCY_META[newCurr].defaultRate;
+            trip.rateMode = '預設匯率';
+            saveStore();
+            renderExpenseSection();
+            renderShopping();
+        }
 
-            appData.expenses.forEach(exp => {
-                if (exp.payer === '我') paidMe += exp.amountKRW;
-                else paidSis += exp.amountKRW;
+        function setManualRate() {
+            const trip = getActiveTrip();
+            const val = parseFloat(document.getElementById('exp-rate-input').value);
+            if (!isNaN(val) && val > 0) {
+                trip.rateToHKD = val;
+                trip.rateMode = '手動固定匯率';
+                saveStore();
+                renderExpenseSection();
+                renderShopping();
+            }
+        }
 
-                if (exp.split === 'all') {
-                    shareMe += exp.amountKRW / 2;
-                    shareSis += exp.amountKRW / 2;
+        async function fetchLiveRate() {
+            const trip = getActiveTrip();
+            const btn = document.getElementById('fetch-rate-btn');
+            btn.innerText = '⏳ 更新中...';
+            try {
+                const res = await fetch(`https://open.er-api.com/v6/latest/${trip.currency}`);
+                const data = await res.json();
+                if (data && data.rates && data.rates.HKD) {
+                    trip.rateToHKD = Number(data.rates.HKD.toFixed(5));
+                    trip.rateMode = `即時自動匯率 (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
+                    saveStore();
+                    renderExpenseSection();
+                    renderShopping();
+                    btn.innerText = '✅ 已更新';
                 } else {
-                    if (exp.payer === '我') shareMe += exp.amountKRW;
-                    else shareSis += exp.amountKRW;
+                    throw new Error('API format');
+                }
+            } catch (e) {
+                alert('目前無法連線取得即時匯率，你也可以直接在右側輸入框手動設定固定匯率！');
+                btn.innerText = '🔄 自動更新匯率';
+            }
+            setTimeout(() => { btn.innerText = '🔄 自動更新匯率'; }, 2000);
+        }
+
+        function renderExpenseSection() {
+            const trip = getActiveTrip();
+            const meta = CURRENCY_META[trip.currency] || CURRENCY_META.KRW;
+
+            document.getElementById('exp-currency-select').value = trip.currency;
+            document.getElementById('exp-rate-input').value = trip.rateToHKD;
+            document.getElementById('rate-status-text').innerText = `目前使用：${trip.rateMode} (1 ${trip.currency} = ${trip.rateToHKD} HKD)`;
+            document.getElementById('exp-amount').placeholder = `${meta.name}金額 (${trip.currency})`;
+
+            // 付款人選單
+            document.getElementById('exp-payer').innerHTML = trip.buddies.map(b => `<option value="${b}">💳 ${b} 先墊付</option>`).join('');
+
+            // 分帳計算
+            let paidMap = {}, shareMap = {};
+            trip.buddies.forEach(b => { paidMap[b] = 0; shareMap[b] = 0; });
+
+            trip.expenses.forEach(exp => {
+                paidMap[exp.payer] = (paidMap[exp.payer] || 0) + exp.amount;
+                if (exp.split === 'all') {
+                    const per = exp.amount / trip.buddies.length;
+                    trip.buddies.forEach(b => shareMap[b] += per);
+                } else {
+                    shareMap[exp.payer] += exp.amount;
                 }
             });
 
-            const diffMe = Math.round(paidMe - shareMe);
             const settlementBox = document.getElementById('settlement-box');
-
-            if (appData.expenses.length === 0) {
-                settlementBox.innerHTML = `<p class="text-gray-400">目前還沒有消費紀錄，開始記帳後會自動幫你和姊姊計算誰要給誰多少錢！</p>`;
-            } else if (diffMe > 0) {
-                settlementBox.innerHTML = `<p class="text-emerald-700 font-medium">🟢 <strong>姊姊</strong> 應給 <strong>我</strong>：<strong>₩${diffMe.toLocaleString()}</strong> (≈ <strong>HK$${Math.round(diffMe * RATE_HKD)}</strong>)</p>`;
-            } else if (diffMe < 0) {
-                const owe = Math.abs(diffMe);
-                settlementBox.innerHTML = `<p class="text-rose-600 font-medium">🔴 <strong>我</strong> 應給 <strong>姊姊</strong>：<strong>₩${owe.toLocaleString()}</strong> (≈ <strong>HK$${Math.round(owe * RATE_HKD)}</strong>)</p>`;
+            if (trip.expenses.length === 0) {
+                settlementBox.innerHTML = `<p class="text-gray-400">尚無消費紀錄，記帳後自動計算分帳與港幣金額！</p>`;
             } else {
-                settlementBox.innerHTML = `<p class="text-gray-600 font-medium">⚪ 我和姊姊目前帳目已完全平分結清！</p>`;
+                settlementBox.innerHTML = trip.buddies.map(b => {
+                    const diff = Math.round(paidMap[b] - shareMap[b]);
+                    const hkdDiff = Math.round(Math.abs(diff) * trip.rateToHKD);
+                    if (diff > 0) return `<p class="text-emerald-700">🟢 <strong>${b}</strong> 應收回：<strong>${meta.symbol}${diff.toLocaleString()}</strong> (≈ HK$${hkdDiff})</p>`;
+                    if (diff < 0) return `<p class="text-rose-600">🔴 <strong>${b}</strong> 應支付：<strong>${meta.symbol}${Math.abs(diff).toLocaleString()}</strong> (≈ HK$${hkdDiff})</p>`;
+                    return `<p class="text-gray-500">⚪ <strong>${b}</strong> 已結清</p>`;
+                }).join('');
             }
 
             const expList = document.getElementById('expense-list');
-            expList.innerHTML = appData.expenses.slice().reverse().map(exp => `
+            expList.innerHTML = trip.expenses.slice().reverse().map(exp => `
                 <div class="bg-white rounded-xl p-3 border border-[#EFECE6] flex justify-between items-center text-xs">
                     <div>
                         <p class="font-bold text-[#3D3A36]">${exp.title}</p>
-                        <p class="text-[10px] text-gray-400">${exp.payer} 付款 ・ ${exp.split === 'all' ? '兩人平分' : '各自負擔'}</p>
+                        <p class="text-[10px] text-gray-400">${exp.payer} 付款 ・ ${exp.split === 'all' ? '全員平分' : '各自負擔'}</p>
                     </div>
                     <div class="text-right">
-                        <p class="font-bold text-[#3D3A36]">₩${exp.amountKRW.toLocaleString()}</p>
-                        <p class="text-[10px] text-gray-400">HK$${Math.round(exp.amountKRW * RATE_HKD)}</p>
+                        <p class="font-bold text-[#3D3A36]">${meta.symbol}${exp.amount.toLocaleString()}</p>
+                        <p class="text-[10px] text-gray-400">HK$${Math.round(exp.amount * trip.rateToHKD)}</p>
                     </div>
                 </div>
             `).join('');
         }
 
+        function addBuddyToTrip() {
+            const trip = getActiveTrip();
+            const name = prompt('請輸入新旅伴名稱：');
+            if (name && name.trim() && !trip.buddies.includes(name.trim())) {
+                trip.buddies.push(name.trim());
+                saveStore();
+                renderAll();
+            }
+        }
+
         function addExpense() {
+            const trip = getActiveTrip();
             const title = document.getElementById('exp-title').value.trim();
             const amount = parseFloat(document.getElementById('exp-amount').value);
             const payer = document.getElementById('exp-payer').value;
             const split = document.getElementById('exp-split').value;
-            if (!title || isNaN(amount) || amount <= 0) return alert('請輸入項目名稱與韓幣金額！');
+            if (!title || isNaN(amount) || amount <= 0) return alert('請輸入項目與正確金額！');
 
-            appData.expenses.push({ id: Date.now(), title, amountKRW: amount, payer, split });
+            trip.expenses.push({ id: Date.now(), title, amount, payer, split });
             document.getElementById('exp-title').value = '';
             document.getElementById('exp-amount').value = '';
-            saveData();
-            renderExpenses();
+            saveStore();
+            renderExpenseSection();
+        }
+
+        // --- 智慧自動分類行李清單 ---
+        function setLuggageCatFilter(cat) {
+            luggageCatFilter = cat;
+            renderLuggage();
         }
 
         function renderLuggage() {
-            const list = document.getElementById('luggage-list');
-            const total = appData.luggage.length;
-            const done = appData.luggage.filter(i => i.checked).length;
+            const trip = getActiveTrip();
+            const total = trip.luggage.length;
+            const done = trip.luggage.filter(i => i.checked).length;
             const pct = total === 0 ? 0 : Math.round((done / total) * 100);
 
-            document.getElementById('luggage-progress-text').innerText = `已完成 ${done} / ${total} 項 (${pct}%)`;
+            document.getElementById('luggage-progress-text').innerText = `已收拾 ${done} / ${total} 項 (${pct}%)`;
             document.getElementById('luggage-progress-bar').style.width = `${pct}%`;
 
-            list.innerHTML = appData.luggage.map(item => `
+            const cats = ['全部', '證件錢財', '保暖衣物', '3C電子', '洗漱護膚', '常備藥品', '隨身其他'];
+            document.getElementById('luggage-cat-filters').innerHTML = cats.map(c => `
+                <button onclick="setLuggageCatFilter('${c}')" class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold ${luggageCatFilter === c ? 'bg-[#7FB093] text-white' : 'bg-[#FDFBF7] text-gray-500 border border-[#EFECE6]'}">${c}</button>
+            `).join('');
+
+            const filtered = trip.luggage.filter(i => luggageCatFilter === '全部' || i.cat === luggageCatFilter);
+            const list = document.getElementById('luggage-list');
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `<p class="text-center text-xs text-gray-400 py-4">此分類目前沒有物品</p>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(item => `
                 <div class="flex items-center justify-between bg-[#FDFBF7] px-3 py-2 rounded-xl border border-[#EFECE6]">
                     <label class="flex items-center gap-2.5 flex-1 cursor-pointer">
                         <input type="checkbox" onchange="toggleLuggage(${item.id})" ${item.checked ? 'checked' : ''} class="accent-[#7FB093] w-4 h-4">
-                        <span class="text-[10px] bg-white border border-[#EFECE6] text-gray-500 px-1.5 py-0.5 rounded shrink-0">${item.cat}</span>
+                        <span class="text-[10px] bg-white border border-[#EFECE6] text-[#3E6B52] font-bold px-1.5 py-0.5 rounded shrink-0">${item.cat}</span>
                         <span class="text-xs ${item.checked ? 'line-through text-gray-400' : 'text-[#3D3A36] font-medium'}">${item.name}</span>
                     </label>
                     <button onclick="deleteLuggage(${item.id})" class="text-gray-300 hover:text-red-400 text-xs ml-2">✕</button>
@@ -438,69 +668,166 @@
             `).join('');
         }
 
-        function toggleLuggage(id) {
-            const item = appData.luggage.find(i => i.id === id);
-            if (item) item.checked = !item.checked;
-            saveData();
+        function addLuggageItem() {
+            const trip = getActiveTrip();
+            const input = document.getElementById('luggage-input');
+            const name = input.value.trim();
+            if (!name) return;
+
+            const autoCat = autoClassifyLuggage(name);
+            trip.luggage.unshift({ id: Date.now(), cat: autoCat, name, checked: false });
+            input.value = '';
+            saveStore();
             renderLuggage();
         }
 
-        function addLuggageItem() {
-            const cat = document.getElementById('luggage-cat').value;
-            const name = document.getElementById('luggage-input').value.trim();
-            if (!name) return;
-            appData.luggage.push({ id: Date.now(), cat, name, checked: false });
-            document.getElementById('luggage-input').value = '';
-            saveData();
+        function toggleLuggage(id) {
+            const trip = getActiveTrip();
+            const item = trip.luggage.find(i => i.id === id);
+            if (item) item.checked = !item.checked;
+            saveStore();
             renderLuggage();
         }
 
         function deleteLuggage(id) {
-            appData.luggage = appData.luggage.filter(i => i.id !== id);
-            saveData();
+            const trip = getActiveTrip();
+            trip.luggage = trip.luggage.filter(i => i.id !== id);
+            saveStore();
             renderLuggage();
         }
 
         function resetLuggage() {
-            if (confirm('確定要將所有行李清單恢復為未勾選狀態嗎？')) {
-                appData.luggage.forEach(i => i.checked = false);
-                saveData();
+            const trip = getActiveTrip();
+            if (confirm('確定要將此趟旅行的行李清單恢復為未勾選狀態嗎？')) {
+                trip.luggage.forEach(i => i.checked = false);
+                saveStore();
                 renderLuggage();
             }
         }
 
+        function editFlightNote() {
+            const trip = getActiveTrip();
+            const updated = prompt('編輯航班與住宿資訊（可用 \\n 換行）：', trip.flightInfo);
+            if (updated !== null) {
+                trip.flightInfo = updated;
+                saveStore();
+                renderAll();
+            }
+        }
+
+        // --- 多趟旅行管理 (切換 / 新建 / 回顧舊紀錄) ---
+        function openTripModal() {
+            const container = document.getElementById('trip-list-container');
+            container.innerHTML = store.trips.map(t => {
+                const isActive = t.id === store.activeTripId;
+                return `
+                    <div onclick="selectTrip('${t.id}')" class="p-3.5 rounded-2xl border cursor-pointer flex justify-between items-center transition ${isActive ? 'bg-[#FDF2EE] border-[#E8927C]' : 'bg-white border-[#EFECE6]'}">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-[#3D3A36]">${t.title}</span>
+                                ${isActive ? '<span class="text-[10px] bg-[#E8927C] text-white px-2 py-0.5 rounded-full font-bold">目前檢視中</span>' : ''}
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-0.5">${t.dates} ・ 貨幣：${t.currency} ・ 旅伴：${t.buddies.join('、')}</p>
+                        </div>
+                        <span class="text-gray-400 text-xs">切換 →</span>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('trip-modal').classList.remove('hidden');
+        }
+
+        function closeTripModal() {
+            document.getElementById('trip-modal').classList.add('hidden');
+        }
+
+        function selectTrip(tripId) {
+            store.activeTripId = tripId;
+            currentDay = 1;
+            shopFilter = '全部';
+            luggageCatFilter = '全部';
+            saveStore();
+            renderAll();
+            closeTripModal();
+        }
+
+        function createNewTrip() {
+            const title = document.getElementById('new-trip-title').value.trim();
+            const dates = document.getElementById('new-trip-dates').value.trim() || '待定日期';
+            const currency = document.getElementById('new-trip-currency').value;
+            const buddiesRaw = document.getElementById('new-trip-buddies').value;
+            const buddies = buddiesRaw.split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+
+            if (!title) return alert('請輸入新旅行的名稱（例如：日本東京之旅）！');
+
+            const newTrip = {
+                id: 'trip_' + Date.now(),
+                title,
+                dates,
+                currency,
+                rateToHKD: CURRENCY_META[currency].defaultRate,
+                rateMode: '預設匯率',
+                buddies: buddies.length > 0 ? buddies : ['我'],
+                days: [
+                    { day: 1, label: 'Day 1 抵達與市區探索', weather: `${title} ・ 天氣晴朗`, tip: '開啟美好旅程的第一天！' }
+                ],
+                itinerary: [],
+                shopping: [],
+                expenses: [],
+                luggage: [
+                    { id: 101, cat: '證件錢財', name: '護照（確認有效期 6 個月以上）', checked: false },
+                    { id: 102, cat: '證件錢財', name: '電子機票、當地網卡 / eSIM', checked: false },
+                    { id: 103, cat: '證件錢財', name: '當地現金 ＋ 海外信用卡', checked: false },
+                    { id: 104, cat: '3C電子', name: '手機充電線、轉接頭、行動電源', checked: false },
+                    { id: 105, cat: '保暖衣物', name: '換洗衣物、睡衣、舒適走路鞋', checked: false },
+                    { id: 106, cat: '常備藥品', name: '個人常備藥、OK繃', checked: false }
+                ],
+                flightInfo: `✈️ 旅程：${title} (${dates})\n點擊右上角「編輯」填寫詳細航班與飯店資訊。`
+            };
+
+            store.trips.unshift(newTrip);
+            store.activeTripId = newTrip.id;
+            currentDay = 1;
+            saveStore();
+            renderAll();
+            closeTripModal();
+            document.getElementById('new-trip-title').value = '';
+            document.getElementById('new-trip-dates').value = '';
+        }
+
+        // --- AI 導遊快速新增 ---
         function toggleAIModal() {
             document.getElementById('ai-modal').classList.toggle('hidden');
         }
 
         function processAIInput(target) {
+            const trip = getActiveTrip();
             const text = document.getElementById('ai-input').value.trim();
             if (!text) return alert('請輸入內容！');
 
             if (target === 'itinerary') {
-                appData.itinerary.push({
-                    day: appData.currentDay,
-                    type: '新增景點/餐廳',
-                    time: '彈性安排',
-                    title: text.slice(0, 18),
-                    location: text.slice(0, 18),
+                trip.itinerary.push({
+                    day: currentDay,
+                    type: '新增行程',
+                    time: '彈性時間',
+                    title: text.slice(0, 20),
+                    location: text.slice(0, 20),
                     tags: ['AI 新增'],
                     note: `備註：${text}`
                 });
-                saveData();
+                saveStore();
                 renderItinerary();
                 switchTab('itinerary');
             } else {
-                const store = text.includes('Daiso') || text.includes('大創') ? 'Daiso 大創' : (text.includes('Olive') ? 'Olive Young' : (text.includes('聖水') ? '聖水洞潮牌' : '樂天超市'));
-                appData.shopping.unshift({
+                const storeGuess = text.includes('Daiso') || text.includes('大創') ? 'Daiso 大創' : (text.includes('Olive') ? 'Olive Young' : (text.includes('藥妝') ? '藥妝店' : '必買清單'));
+                trip.shopping.unshift({
                     id: Date.now(),
                     name: text,
-                    store: store,
-                    priceKRW: 5000,
-                    desc: '透過 AI 導遊助手快速建檔',
+                    store: storeGuess,
+                    price: 1000,
+                    desc: '透過 AI 導遊助手新增',
                     bought: false
                 });
-                saveData();
+                saveStore();
                 renderShopping();
                 switchTab('shopping');
             }
@@ -508,10 +835,8 @@
             toggleAIModal();
         }
 
-        renderItinerary();
-        renderShopping();
-        renderExpenses();
-        renderLuggage();
+        // 啟動渲染
+        renderAll();
     </script>
 </body>
 </html>
