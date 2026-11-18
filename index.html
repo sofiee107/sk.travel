@@ -6,33 +6,42 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="旅の手帳">
-    <title>旅の手帳｜多趟旅行隨身小工具</title>
+    <title>旅の手帳｜智慧多功能旅遊小工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #FDFBF7; color: #3D3A36; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @media print {
+            body { background: white !important; }
+            header, nav, button, .no-print { display: none !important; }
+            .print-container { padding: 0 !important; margin: 0 !important; }
+        }
     </style>
 </head>
 <body class="bg-[#FDFBF7] pb-24">
-    <div class="max-w-md mx-auto min-h-screen bg-[#FDFBF7] shadow-xl flex flex-col relative">
+    <div class="max-w-md mx-auto min-h-screen bg-[#FDFBF7] shadow-xl flex flex-col relative print-container">
         
-        <!-- 頂部狀態列：可點擊切換／新建旅行 -->
+        <!-- 頂部狀態列 -->
         <header class="bg-[#F8F4EC]/95 backdrop-blur-md px-4 pt-5 pb-3 border-b border-[#EFECE6] sticky top-0 z-30">
             <div class="flex justify-between items-center gap-2">
                 <button onclick="openTripModal()" class="text-left group flex-1 min-w-0">
                     <div class="flex items-center gap-1.5">
                         <span id="header-date-badge" class="text-[11px] bg-[#E8927C]/15 text-[#D9775E] px-2.5 py-0.5 rounded-full font-medium truncate">11/29 - 12/6</span>
-                        <span class="text-[10px] text-gray-400">點擊切換旅程 ▾</span>
+                        <span class="text-[10px] text-gray-400">切換/編輯 ▾</span>
                     </div>
                     <h1 id="header-trip-title" class="text-lg font-bold text-[#3D3A36] mt-1 tracking-tight truncate group-active:opacity-70">
                         首爾姊妹自由行 🇰🇷
                     </h1>
                 </button>
-                <div class="text-right shrink-0">
-                    <span id="header-buddies-badge" class="text-[11px] bg-[#E3EFE8] text-[#3E6B52] px-2.5 py-1 rounded-lg font-medium block">👭 我 & 姊姊</span>
-                    <span class="text-[10px] text-gray-400 mt-0.5 block">本機自動存檔</span>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="exportTripPDF()" class="bg-[#3D3A36] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition">
+                        📄 導出 PDF
+                    </button>
+                    <button onclick="openEditTripModal(store.activeTripId)" id="header-buddies-badge" class="text-[11px] bg-[#E3EFE8] text-[#3E6B52] px-2.5 py-1 rounded-lg font-medium block active:scale-95 transition">
+                        👭 我 & 姊姊 ✏️
+                    </button>
                 </div>
             </div>
         </header>
@@ -40,11 +49,16 @@
         <!-- 主要內容區 -->
         <main class="flex-1 p-4 space-y-4">
             
-            <!-- 分頁 1：每日行程 -->
+            <!-- 分頁 1：每日行程（列表 / 地圖 雙模式＋智慧地圖切換） -->
             <section id="tab-itinerary" class="tab-content space-y-4">
-                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1" id="day-tabs"></div>
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1 flex-1" id="day-tabs"></div>
+                    <div class="flex bg-[#F0EBE1] p-0.5 rounded-xl shrink-0 ml-1">
+                        <button onclick="setItineraryView('list')" id="view-btn-list" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs">📋 列表</button>
+                        <button onclick="setItineraryView('map')" id="view-btn-map" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500">🗺️ 地圖</button>
+                    </div>
+                </div>
 
-                <!-- 天氣與地區卡片 -->
                 <div id="weather-card" class="bg-gradient-to-r from-[#EBF4FA] to-[#F5F9FC] rounded-2xl p-3.5 border border-[#DCEAF5] flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span class="text-2xl" id="weather-icon">🧥</span>
@@ -56,23 +70,36 @@
                     <button onclick="addNewDay()" class="text-[10px] bg-white/90 text-[#3A5A78] px-2.5 py-1.5 rounded-lg font-bold shadow-xs shrink-0">+ 新增天數</button>
                 </div>
 
-                <!-- 行程卡片列表 -->
                 <div id="itinerary-list" class="space-y-3"></div>
+
+                <div id="itinerary-map-view" class="hidden space-y-3">
+                    <div class="bg-white rounded-2xl p-3 border border-[#EFECE6] shadow-sm space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-[#3D3A36]" id="map-title-label">📍 地圖位置預覽 (韓國自動 Naver)</span>
+                            <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded" id="map-engine-badge">Naver 導航連動</span>
+                        </div>
+                        <div id="map-iframe-container" class="w-full h-72 rounded-xl overflow-hidden border border-[#EFECE6] bg-[#F8F4EC] flex items-center justify-center"></div>
+                        <p class="text-[10px] text-gray-400 text-center" id="map-tip-text">💡 點擊下方各景點按鈕將自動開啟 Naver Map 導航。</p>
+                    </div>
+                    <div id="itinerary-map-list" class="space-y-2"></div>
+                </div>
             </section>
 
-            <!-- 分頁 2：購物清單 -->
-            <section id="tab-shopping" class="tab-content hidden space-y-4">
+            <!-- 分頁 2：圖文購物清單 -->
+            <section id="tab-shopping" class="tab-content hidden space-y-3.5">
                 <div class="flex gap-2">
-                    <input type="text" id="shop-search" oninput="renderShopping()" placeholder="🔍 搜尋商品或商店 (如：唇膏、Daiso、藥妝)..." class="flex-1 bg-white border border-[#EFECE6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-[#E8927C]">
+                    <input type="text" id="shop-search" oninput="renderShopping()" placeholder="🔍 搜尋商品或商店 (如：唇膏、Daiso)..." class="flex-1 bg-white border border-[#EFECE6] rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-[#E8927C]">
+                    <button onclick="openAddShopModal()" class="bg-[#E8927C] text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 shadow-xs active:scale-95 transition">
+                        ➕ 新增圖文
+                    </button>
                 </div>
                 <div class="flex gap-1.5 overflow-x-auto hide-scrollbar" id="shop-filters"></div>
-                <div id="shopping-list" class="space-y-2.5"></div>
+                <div id="shopping-list" class="space-y-3"></div>
+                <input type="file" id="quick-img-upload" accept="image/*" class="hidden" onchange="handleQuickImageUpload(event)">
             </section>
 
             <!-- 分頁 3：多幣別分帳記帳 -->
             <section id="tab-expense" class="tab-content hidden space-y-4">
-                
-                <!-- 貨幣與匯率設定面板 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">💱 幣別與匯率設定 (對港幣 HKD)</h3>
@@ -80,7 +107,6 @@
                             🔄 自動更新匯率
                         </button>
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-[10px] text-gray-400 block mb-1">當地外幣選擇</label>
@@ -97,24 +123,20 @@
                         </div>
                         <div>
                             <label class="text-[10px] text-gray-400 block mb-1">匯率模式 (1 外幣 = ? HKD)</label>
-                            <div class="flex items-center gap-1">
-                                <input type="number" step="0.0001" id="exp-rate-input" onchange="setManualRate()" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-[#3D3A36]">
-                            </div>
+                            <input type="number" step="0.0001" id="exp-rate-input" onchange="setManualRate()" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-[#3D3A36]">
                         </div>
                     </div>
-                    <p id="rate-status-text" class="text-[10px] text-gray-400">目前使用：預設/固定匯率 (1 KRW = 0.0056 HKD)</p>
+                    <p id="rate-status-text" class="text-[10px] text-gray-400">目前使用：預設/固定匯率</p>
                 </div>
 
-                <!-- 旅伴分帳結算看板 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">⚖️ 同行旅伴分帳結算</h3>
-                        <button onclick="addBuddyToTrip()" class="text-[11px] text-[#E8927C] font-bold">+ 新增旅伴</button>
+                        <button onclick="openEditTripModal(store.activeTripId)" class="text-[11px] text-[#E8927C] font-bold">👥 管理旅伴 (+新增)</button>
                     </div>
                     <div id="settlement-box" class="bg-[#FDFBF7] rounded-xl p-3 border border-[#EFECE6] text-xs space-y-1"></div>
                 </div>
 
-                <!-- 新增記帳表單 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
                     <h3 class="text-sm font-bold text-[#3D3A36]">✍️ 新增消費紀錄</h3>
                     <div class="grid grid-cols-2 gap-2">
@@ -131,14 +153,44 @@
                     <button onclick="addExpense()" class="w-full bg-[#E8927C] text-white font-bold text-xs py-2.5 rounded-xl shadow-sm active:scale-95 transition">加入帳本 (自動換算港幣 HK$)</button>
                 </div>
 
-                <!-- 帳目明細 -->
                 <div id="expense-list" class="space-y-2"></div>
             </section>
 
-            <!-- 分頁 4：智慧自動分類行李清單 ＋ 航班工具 -->
+            <!-- 分頁 4：航班專區、住宿專區、地鐵圖、行李清單 -->
             <section id="tab-tools" class="tab-content hidden space-y-4">
                 
-                <!-- 🧳 智慧自動分類行李清單 -->
+                <!-- ✈️ 航班獨立專區 -->
+                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-[#3D3A36]">✈️ 航班專區 (Flight Info)</h3>
+                        <button onclick="editFlightInfo()" class="text-[11px] text-[#E8927C] font-bold">✏️ 編輯航班</button>
+                    </div>
+                    <div id="flight-card-container" class="space-y-2 text-xs"></div>
+                </div>
+
+                <!-- 🏨 住宿獨立專區 (含地址、電話、交通出口、公車) -->
+                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-[#3D3A36]">🏨 住宿專區 (Hotel & Transport)</h3>
+                        <button onclick="editHotelInfo()" class="text-[11px] text-[#E8927C] font-bold">✏️ 編輯住宿</button>
+                    </div>
+                    <div id="hotel-card-container" class="space-y-2 text-xs"></div>
+                </div>
+
+                <!-- 🚇 地鐵圖速查 -->
+                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-[#3D3A36]">🚇 當地鐵路與地鐵圖速查</h3>
+                        <span class="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded font-bold">官方全圖</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                        <a href="https://www.seoulmetro.co.kr/kr/page.do?menuIdx=354" target="_blank" class="bg-[#F8F4EC] p-2.5 rounded-xl border border-[#EFECE6] font-bold text-[#3D3A36] block">🇰🇷 首爾地鐵圖</a>
+                        <a href="https://www.tokyometro.jp/en/subwaymap/index.html" target="_blank" class="bg-[#F8F4EC] p-2.5 rounded-xl border border-[#EFECE6] font-bold text-[#3D3A36] block">🇯🇵 東京地鐵圖</a>
+                        <a href="https://subway.osakametro.co.jp/osakacitysubwaymap.pdf" target="_blank" class="bg-[#F8F4EC] p-2.5 rounded-xl border border-[#EFECE6] font-bold text-[#3D3A36] block">🇯🇵 大阪地鐵圖</a>
+                    </div>
+                </div>
+
+                <!-- 🧳 行李準備清單 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <div>
@@ -147,34 +199,17 @@
                         </div>
                         <button onclick="resetLuggage()" class="text-[11px] text-gray-400 underline">重置勾選</button>
                     </div>
-                    
                     <div class="w-full bg-[#F3EFE6] h-2 rounded-full overflow-hidden">
                         <div id="luggage-progress-bar" class="bg-[#7FB093] h-full transition-all duration-300" style="width: 0%"></div>
                     </div>
-
-                    <!-- 輸入物品即自動分類 -->
                     <div class="space-y-1.5">
                         <div class="flex gap-1.5">
-                            <input type="text" id="luggage-input" onkeydown="if(event.key==='Enter') addLuggageItem()" placeholder="輸入物品名稱，自動幫你分類 (如：充電線、護照)..." class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7FB093]">
+                            <input type="text" id="luggage-input" onkeydown="if(event.key==='Enter') addLuggageItem()" placeholder="輸入物品名稱，自動幫你分類..." class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#7FB093]">
                             <button onclick="addLuggageItem()" class="bg-[#7FB093] text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0">加入</button>
                         </div>
-                        <p class="text-[10px] text-gray-400">✨ 支援自動分類：證件錢財、保暖衣物、3C電子、洗漱護膚、常備藥品</p>
                     </div>
-
-                    <!-- 行李分類篩選標籤 -->
                     <div class="flex gap-1.5 overflow-x-auto hide-scrollbar" id="luggage-cat-filters"></div>
-
-                    <!-- 行李分組清單 -->
                     <div id="luggage-list" class="space-y-3 max-h-80 overflow-y-auto pr-1"></div>
-                </div>
-
-                <!-- ✈️ 航班與住宿備忘 -->
-                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-sm font-bold text-[#3D3A36]">✈️ 航班與住宿資訊</h3>
-                        <button onclick="editFlightNote()" class="text-[11px] text-[#E8927C] font-bold">✏️ 編輯</button>
-                    </div>
-                    <div id="flight-info-box" class="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6] text-xs space-y-1.5 whitespace-pre-line text-gray-700 leading-relaxed"></div>
                 </div>
 
                 <!-- 🆘 緊急聯絡電話 -->
@@ -194,37 +229,94 @@
             <span>✨</span> AI 導遊助手
         </button>
 
-        <!-- 🗂️ 我的旅行檔案庫 Modal (切換／新建／刪除旅行) -->
+        <!-- 🛍️ 新增圖文購物 Modal -->
+        <div id="add-shop-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
+            <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3.5 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-[#EFECE6] pb-3">
+                    <h3 class="text-base font-bold text-[#3D3A36]">🛍️ 新增圖文購物清單</h3>
+                    <button onclick="closeAddShopModal()" class="text-gray-400 text-lg font-bold">✕</button>
+                </div>
+                <div class="flex items-center gap-3 bg-[#FDFBF7] p-3 rounded-2xl border border-dashed border-[#D8D0C5]">
+                    <img id="new-shop-img-preview" src="https://placehold.co/160x160/F3EFE6/9C9488?text=📷+上傳圖片" class="w-20 h-20 rounded-xl object-cover border border-[#EFECE6] shrink-0">
+                    <div class="space-y-1.5 flex-1">
+                        <p class="text-xs font-bold text-[#3D3A36]">上傳商品截圖／實拍圖</p>
+                        <label class="inline-block bg-[#3D3A36] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg cursor-pointer">
+                            📁 選擇相簿圖片
+                            <input type="file" id="new-shop-img-input" accept="image/*" class="hidden" onchange="previewNewShopImage(event)">
+                        </label>
+                    </div>
+                </div>
+                <div class="space-y-2.5">
+                    <input type="text" id="new-shop-name" placeholder="商品名稱 (例：唇釉)" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2.5 text-xs font-bold">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="new-shop-store" placeholder="購買商店" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                        <input type="number" id="new-shop-price" placeholder="大約外幣價格" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                    </div>
+                    <textarea id="new-shop-desc" rows="2" placeholder="備註..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs"></textarea>
+                </div>
+                <button onclick="saveNewShopItem()" class="w-full bg-[#E8927C] text-white font-bold text-xs py-3 rounded-xl shadow-sm">✅ 加入購物清單</button>
+            </div>
+        </div>
+
+        <!-- 🖼️ 燈箱 -->
+        <div id="lightbox-modal" onclick="closeLightbox()" class="fixed inset-0 bg-black/85 z-50 hidden flex flex-col items-center justify-center p-4">
+            <img id="lightbox-img" src="" class="max-w-full max-h-[75vh] rounded-2xl shadow-2xl object-contain">
+            <p id="lightbox-caption" class="text-white text-sm font-bold mt-3 text-center"></p>
+        </div>
+
+        <!-- 🗂️ 檔案庫 Modal -->
         <div id="trip-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
             <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
                 <div class="flex justify-between items-center border-b border-[#EFECE6] pb-3">
                     <h3 class="text-base font-bold text-[#3D3A36]">🗂️ 我的旅行檔案庫</h3>
                     <button onclick="closeTripModal()" class="text-gray-400 text-lg font-bold">✕</button>
                 </div>
-
-                <!-- 歷史與現有旅行列表 -->
-                <div class="space-y-2">
-                    <p class="text-[11px] font-bold text-gray-400">點選切換旅行（所有舊紀錄皆完整保留）：</p>
-                    <div id="trip-list-container" class="space-y-2"></div>
-                </div>
-
-                <!-- 新建一趟旅行表單 -->
+                <div id="trip-list-container" class="space-y-2"></div>
                 <div class="bg-[#FDFBF7] p-4 rounded-2xl border border-[#EFECE6] space-y-2.5">
                     <h4 class="text-xs font-bold text-[#E8927C]">➕ 開啟一趟全新旅行</h4>
-                    <input type="text" id="new-trip-title" placeholder="旅行名稱 (例：東京櫻花之旅 🌸)" class="w-full bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                    <input type="text" id="new-trip-title" placeholder="旅行名稱 (例：日本東京之旅 🌸)" class="w-full bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
                     <div class="grid grid-cols-2 gap-2">
                         <input type="text" id="new-trip-dates" placeholder="日期 (例：2027/04/01 - 04/06)" class="bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
                         <select id="new-trip-currency" class="bg-white border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs">
-                            <option value="JPY">🇯🇵 日本 (JPY 日圓)</option>
                             <option value="KRW">🇰🇷 韓國 (KRW 韓幣)</option>
+                            <option value="JPY">🇯🇵 日本 (JPY 日圓)</option>
                             <option value="TWD">🇹🇼 台灣 (TWD 台幣)</option>
                             <option value="THB">🇹🇭 泰國 (THB 泰銖)</option>
-                            <option value="EUR">🇪🇺 歐洲 (EUR 歐元)</option>
+                            <option value="EUR">🇪🇺 歐元 (EUR 歐元)</option>
                             <option value="USD">🇺🇸 美國 (USD 美元)</option>
                         </select>
                     </div>
-                    <input type="text" id="new-trip-buddies" placeholder="同行旅伴，用逗號分隔 (例：我, 姊姊)" value="我, 姊姊" class="w-full bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                    <button onclick="createNewTrip()" class="w-full bg-[#3D3A36] text-white font-bold text-xs py-2.5 rounded-xl shadow-sm active:scale-95 transition">✨ 建立並進入新旅程</button>
+                    <input type="text" id="new-trip-buddies" placeholder="同行旅伴 (例：我, 姊姊)" value="我, 姊姊" class="w-full bg-white border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                    <button onclick="createNewTrip()" class="w-full bg-[#3D3A36] text-white font-bold text-xs py-2.5 rounded-xl shadow-sm">✨ 建立並進入新旅程</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✏️ 編輯旅行設定 Modal -->
+        <div id="edit-trip-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
+            <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-[#EFECE6] pb-3">
+                    <h3 class="text-base font-bold text-[#3D3A36]">✏️ 編輯旅行設定</h3>
+                    <button onclick="closeEditTripModal()" class="text-gray-400 text-lg font-bold">✕</button>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 block mb-1">旅行名稱</label>
+                        <input type="text" id="edit-trip-title-input" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2.5 text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 block mb-1">旅行日期</label>
+                        <input type="text" id="edit-trip-dates-input" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 block mb-1.5">同行旅伴名單</label>
+                        <div id="edit-buddies-chips" class="flex flex-wrap gap-1.5 mb-2"></div>
+                        <div class="flex gap-1.5">
+                            <input type="text" id="add-buddy-input" onkeydown="if(event.key==='Enter') addBuddyInModal()" placeholder="輸入新旅伴名字..." class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                            <button onclick="addBuddyInModal()" class="bg-[#7FB093] text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0">+ 加入</button>
+                        </div>
+                    </div>
+                    <button onclick="saveEditedTrip()" class="w-full bg-[#E8927C] text-white font-bold text-xs py-3 rounded-xl shadow-sm">💾 儲存修改</button>
                 </div>
             </div>
         </div>
@@ -236,16 +328,14 @@
                     <h3 class="text-sm font-bold text-[#3D3A36]">✨ AI 隨身導遊・一鍵新增</h3>
                     <button onclick="toggleAIModal()" class="text-gray-400 text-lg font-bold">✕</button>
                 </div>
-                <p class="text-[11px] text-gray-500">輸入想去的景點、餐廳或購物清單，自動加入目前這趟旅行：</p>
-                <textarea id="ai-input" rows="3" placeholder="例如：「一蘭拉麵 渋谷店」或「松本清 眼藥水 800日圓」..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs focus:outline-none focus:border-[#E8927C]"></textarea>
+                <textarea id="ai-input" rows="3" placeholder="例如：「景福宮穿韓服」..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs focus:outline-none focus:border-[#E8927C]"></textarea>
                 <div class="flex gap-2">
-                    <button onclick="processAIInput('itinerary')" class="flex-1 bg-[#E8927C] text-white py-2.5 rounded-xl text-xs font-bold">➕ 加入目前天數行程</button>
-                    <button onclick="processAIInput('shopping')" class="flex-1 bg-[#7FB093] text-white py-2.5 rounded-xl text-xs font-bold">🛍️ 加入購物清單</button>
+                    <button onclick="processAIInput('itinerary')" class="flex-1 bg-[#E8927C] text-white py-2.5 rounded-xl text-xs font-bold">➕ 加入行程</button>
+                    <button onclick="processAIInput('shopping')" class="flex-1 bg-[#7FB093] text-white py-2.5 rounded-xl text-xs font-bold">🛍️ 加入購物</button>
                 </div>
             </div>
         </div>
 
-        <!-- 底部原生導覽列 -->
         <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-[#EFECE6] px-2 py-2 flex justify-around items-center z-30">
             <button onclick="switchTab('itinerary')" id="nav-itinerary" class="nav-btn flex flex-col items-center text-[#E8927C] text-[11px] font-bold">
                 <span class="text-lg mb-0.5">📅</span>每日行程
@@ -257,13 +347,12 @@
                 <span class="text-lg mb-0.5">💰</span>分帳記帳
             </button>
             <button onclick="switchTab('tools')" id="nav-tools" class="nav-btn flex flex-col items-center text-gray-400 text-[11px] font-medium">
-                <span class="text-lg mb-0.5">🧳</span>行李/航班
+                <span class="text-lg mb-0.5">🧳</span>航班/住宿
             </button>
         </nav>
     </div>
 
     <script>
-        // 預設各國貨幣對港幣 (HKD) 參考匯率與符號
         const CURRENCY_META = {
             KRW: { symbol: '₩', name: '韓幣', defaultRate: 0.0056 },
             JPY: { symbol: '¥', name: '日圓', defaultRate: 0.051 },
@@ -275,7 +364,11 @@
             CNY: { symbol: '¥', name: '人民幣', defaultRate: 1.08 }
         };
 
-        // 第一趟預設旅行：2026/11/29 - 12/6 首爾姊妹自由行
+        function makeSvgCard(bgHex, textHex, emoji, label) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" rx="24" fill="${bgHex}"/><text x="100" y="95" font-size="64" text-anchor="middle">${emoji}</text><text x="100" y="145" font-family="sans-serif" font-size="20" font-weight="bold" fill="${textHex}" text-anchor="middle">${label}</text></svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
         const initialSeoulTrip = {
             id: 'trip_seoul_2026',
             title: '首爾姊妹自由行 🇰🇷',
@@ -285,91 +378,126 @@
             rateMode: '固定/預設匯率',
             buddies: ['我', '姊姊'],
             days: [
-                { day: 1, label: 'Day 1 (11/29) 明洞・首爾站', weather: '首爾・明洞/首爾站 0°C ~ 8°C', tip: '凌晨機抵達注意保暖・洋蔥式穿搭' },
-                { day: 2, label: 'Day 2 (11/30) 聖水洞', weather: '首爾・聖水洞 -1°C ~ 7°C', tip: '街拍好天氣・風大建議戴頸巾' },
-                { day: 3, label: 'Day 3 (12/1) 愛寶樂園', weather: '京畿道龍仁・愛寶樂園 -3°C ~ 5°C', tip: '山區氣溫更低・務必帶足暖暖包' },
-                { day: 4, label: 'Day 4–8 (12/2–6) 待規劃', weather: '首爾 12月初冬季 -2°C ~ 6°C', tip: '想到新行程隨時按右下角 AI 助手加入' }
+                { day: 1, label: 'Day 1 (11/29) 明洞・首爾站', weather: '首爾・明洞/首爾站 0°C ~ 8°C', tip: '凌晨機抵達注意保暖' },
+                { day: 2, label: 'Day 2 (11/30) 聖水洞', weather: '首爾・聖水洞 -1°C ~ 7°C', tip: '街拍好天氣' },
+                { day: 3, label: 'Day 3 (12/1) 愛寶樂園', weather: '京畿道龍仁・愛寶樂園 -3°C ~ 5°C', tip: '務必帶足暖暖包' },
+                { day: 4, label: 'Day 4–8 (12/2–6) 待規劃', weather: '首爾 12月初冬季 -2°C ~ 6°C', tip: '隨時新增行程' }
             ],
             itinerary: [
-                { day: 1, type: '交通/入住', time: '早上抵達', title: '仁川機場 → 首爾站/明洞放行李', location: '서울역', tags: ['AREX機場快線', '先寄放行李'], note: '搭凌晨大韓航空抵達後，搭 AREX 到首爾站轉車前往飯店寄放行李。' },
-                { day: 1, type: '餐廳', time: '午餐/晚餐', title: '明洞神仙雪濃湯 ＆ 商圈換錢', location: '신선설농탕 명동점', tags: ['必吃美食', '清淡暖胃'], note: '必點菜單：招牌雪濃湯。順便到大使館前換錢所換韓幣。' },
-                { day: 1, type: '購物', time: '傍晚', title: '首爾站 樂天超市 (Lotte Mart)', location: '롯데마트 제타플렉스 서울역점', tags: ['必買伴手禮', '現場退稅'], note: '就在首爾站旁，記得帶護照辦理現場退稅。' },
-                { day: 2, type: '餐廳', time: '11:30', title: '聖水洞 祖傳三代馬鈴薯排骨湯', location: '소문난 성수 감자탕', tags: ['必吃美食', '排隊名店'], note: '必點菜單：招牌馬鈴薯排骨湯、最後加點炒飯。' },
-                { day: 2, type: '景點/逛街', time: '下午', title: '聖水洞潮牌＆咖啡廳巡禮', location: '성수동 카페거리', tags: ['必逛潮牌', '打卡咖啡廳'], note: '推薦逛 Tamburins、Dior 聖水概念店、Mardi Mercredi。' },
-                { day: 3, type: '景點', time: '全日', title: '愛寶樂園 Everland 一日遊', location: '에버랜드', tags: ['主題樂園', '必看熊貓'], note: '推薦設施：木質過山車 T-Express、熊貓世界。12月戶外極冷務必貼暖暖包。' },
-                { day: 4, type: '行程規劃', time: '12/2 – 12/6', title: '尚待規劃（點擊右下角 ✨ AI 助手新增）', location: '서울', tags: ['自由彈性'], note: 'Day 4 至 Day 8 (12/6 晚上大韓航空回香港) 尚未安排，隨時可新增！' }
+                { day: 1, type: '交通/入住', time: '早上抵達', title: '仁川機場 → 首爾站/明洞放行李', location: '서울역', tags: ['AREX機場快線'], note: '搭凌晨大韓航空抵達後，搭 AREX 到首爾站轉車。' },
+                { day: 1, type: '餐廳', time: '午餐/晚餐', title: '明洞神仙雪濃湯 ＆ 商圈換錢', location: '신선설농탕 명동점', tags: ['必吃美食'], note: '招牌雪濃湯暖胃。' },
+                { day: 1, type: '購物', time: '傍晚', title: '首爾站 樂天超市', location: '롯데마트 제타플렉스 서울역점', tags: ['伴手禮'], note: '首爾站旁，辦理現場退稅。' },
+                { day: 2, type: '餐廳', time: '11:30', title: '聖水洞 祖傳三代馬鈴薯排骨湯', location: '소문난 성수 감자탕', tags: ['排隊名店'], note: '招牌排骨湯與炒飯。' },
+                { day: 2, type: '景點', time: '下午', title: '聖水洞潮牌街', location: '성수동 카페거리', tags: ['潮流選物'], note: '逛 Tamburins、Dior 概念店。' },
+                { day: 3, type: '景點', time: '全日', title: '愛寶樂園 Everland', location: '에버랜드', tags: ['主題樂園'], note: '玩 T-Express 與看熊貓。' }
             ],
             shopping: [
-                { id: 1, name: 'Daiso 凡士林保濕潤唇膏', store: 'Daiso 大創', price: 3000, desc: '韓國冬天必備高保濕唇膏', bought: false },
-                { id: 2, name: 'Torriden 玻尿酸保濕面膜', store: 'Olive Young', price: 15000, desc: '韓國乾燥天氣救星', bought: false },
-                { id: 3, name: 'HBAF 蜂蜜奶油杏仁果', store: '樂天超市', price: 7500, desc: '首爾站樂天超市必買手信', bought: false }
+                { id: 1, name: 'Daiso 凡士林保濕潤唇膏', store: 'Daiso 大創', price: 3000, desc: '保濕防乾裂', image: makeSvgCard('#FCE8E6', '#B84A39', '💄', '潤唇膏'), bought: false },
+                { id: 2, name: 'Torriden 玻尿酸面膜', store: 'Olive Young', price: 15000, desc: '深層補水急救', image: makeSvgCard('#E3F2FD', '#2B6CB0', '🧴', '面膜'), bought: false }
             ],
             expenses: [],
             luggage: [
-                { id: 1, cat: '證件錢財', name: '特區護照（確認有效期 6 個月以上）', checked: false },
-                { id: 2, cat: '證件錢財', name: '大韓航空電子機票＋韓國 eSIM 網卡', checked: false },
-                { id: 3, cat: '證件錢財', name: '港幣現金（明洞換錢）＋海外信用卡', checked: false },
-                { id: 4, cat: '保暖衣物', name: '長版羽絨 / 厚大衣 ＋ 發熱衣', checked: false },
-                { id: 5, cat: '保暖衣物', name: '暖暖包、頸巾、冷帽（愛寶樂園必備）', checked: false },
-                { id: 6, cat: '3C電子', name: '韓國雙圓孔轉接頭（220V）＋行動電源', checked: false },
-                { id: 7, cat: '洗漱護膚', name: '高保濕面霜、潤唇膏', checked: false },
-                { id: 8, cat: '常備藥品', name: '腸胃藥、止痛藥、OK繃', checked: false }
+                { id: 1, cat: '證件錢財', name: '特區護照（有效期 6 個月以上）', checked: false },
+                { id: 2, cat: '證件錢財', name: '大韓航空機票 ＋ eSIM 網卡', checked: false },
+                { id: 3, cat: '保暖衣物', name: '羽絨大衣 ＋ 發熱衣', checked: false },
+                { id: 4, cat: '3C電子', name: '轉接頭（220V）＋ 行動電源', checked: false }
             ],
-            flightInfo: '✈️ 去程 11/29 (週日) 凌晨：大韓航空 香港 (HKG) → 首爾仁川 (ICN)\n✈️ 回程 12/06 (週日) 晚上：大韓航空 首爾仁川 (ICN) → 香港 (HKG)\n🏨 住宿：明洞 / 首爾站周邊飯店（可點右上角編輯補充訂房代號）'
+            // 結構化獨立航班資料
+            flight: {
+                outbound: { airline: '大韓航空 (Korean Air)', flightNo: 'BR160 / KE...', date: '11/29 (週日) 凌晨', dep: '香港 HKG', arr: '首爾仁川 ICN', terminal: '第 1 航廈', code: 'XK92LM' },
+                inbound: { airline: '大韓航空 (Korean Air)', flightNo: 'KE...', date: '12/06 (週日) 晚上', dep: '首爾仁川 ICN', arr: '香港 HKG', terminal: '第 2 航廈', code: 'XK92LM' }
+            },
+            // 結構化獨立住宿資料（含鄰近交通與地鐵出口）
+            hotel: {
+                name: '明洞九樹精品飯店 (Nine Tree Premier Hotel Myeongdong)',
+                address: '首爾特別市中區明洞 10 街 51 (서울특별시 중구 명동10길 51)',
+                phone: '+82 2-750-0999',
+                bookingNo: '99482710',
+                nights: '7 晚 (11/29 - 12/06)',
+                subway: '地鐵 4 號線「明洞站 (Myeong-dong)」8 號出口步行 3 分鐘',
+                bus: '機場巴士 6001 號「明洞站」站牌下車步行 4 分鐘'
+            }
         };
 
-        // 總資料庫結構：支援多趟旅行切換與歷史保存
         let store = JSON.parse(localStorage.getItem('travel_notebook_multi_v1')) || {
             activeTripId: 'trip_seoul_2026',
             trips: [initialSeoulTrip]
         };
 
         let currentDay = 1;
+        let itineraryViewMode = 'list';
         let shopFilter = '全部';
         let luggageCatFilter = '全部';
+        let editingTripId = null;
+        let tempEditBuddies = [];
+        let pendingNewShopImage = '';
+        let targetQuickUploadShopId = null;
 
         function getActiveTrip() {
             return store.trips.find(t => t.id === store.activeTripId) || store.trips[0];
         }
 
         function saveStore() {
-            localStorage.setItem('travel_notebook_multi_v1', JSON.stringify(store));
+            try {
+                localStorage.setItem('travel_notebook_multi_v1', JSON.stringify(store));
+            } catch (e) {
+                alert('手機儲存空間不足');
+            }
         }
 
-        // 智慧行李關鍵字自動分類引擎
+        // 智慧地圖判斷邏輯：韓國自動 Naver Map，其他國家全面 Google Maps
+        function getMapUrl(locationName) {
+            const trip = getActiveTrip();
+            const isKorea = trip.currency === 'KRW' || (trip.title && trip.title.includes('首爾'));
+            if (isKorea) {
+                return `https://map.naver.com/v5/search/${encodeURIComponent(locationName)}`;
+            } else {
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
+            }
+        }
+
+        function compressImageFile(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 320;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                    else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', 0.72));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         function autoClassifyLuggage(itemName) {
             const text = itemName.toLowerCase();
-            if (/護照|身分證|身份證|機票|簽證|現金|港幣|韓幣|日圓|信用卡|提款卡|保險|錢包|八達通|t-money|suica|sim|esim|網卡|退卡針/.test(text)) {
-                return '證件錢財';
-            }
-            if (/衣|褲|裙|外套|羽絨|大衣|發熱|heattech|鞋|襪|帽|頸巾|圍巾|手套|睡衣|內衣|內褲|暖暖包|墨鏡|太陽眼鏡/.test(text)) {
-                return '保暖衣物';
-            }
-            if (/充電|線|插頭|轉接|行動電源|尿袋|相機|電池|耳機|airpods|ipad|電腦|wifi|自拍棒|腳架/.test(text)) {
-                return '3C電子';
-            }
-            if (/洗面|牙刷|牙膏|毛巾|化妝|卸妝|防曬|面霜|乳液|護手霜|唇膏|護唇|隱形眼鏡|眼鏡|梳|吹風機|直髮夾|香水/.test(text)) {
-                return '洗漱護膚';
-            }
-            if (/藥|止痛|腸胃|感冒|暈車|ok繃|膠布|維他命|眼藥水|口罩|酒精|濕紙巾/.test(text)) {
-                return '常備藥品';
-            }
+            if (/護照|身分證|機票|簽證|現金|港幣|韓幣|日圓|信用卡|SIM|esim|網卡/.test(text)) return '證件錢財';
+            if (/衣|褲|裙|外套|羽絨|大衣|發熱|heattech|鞋|襪|帽|頸巾|圍巾|暖暖包/.test(text)) return '保暖衣物';
+            if (/充電|線|插頭|轉接|行動電源|尿袋|相機|耳機|wifi/.test(text)) return '3C電子';
+            if (/洗面|牙刷|牙膏|毛巾|化妝|卸妝|防曬|面霜|乳液|護手霜|唇膏/.test(text)) return '洗漱護膚';
+            if (/藥|止痛|腸胃|感冒|暈車|ok繃|膠布|口罩/.test(text)) return '常備藥品';
             return '隨身其他';
         }
 
-        // 渲染頂部資訊與各分頁
         function renderAll() {
             const trip = getActiveTrip();
             document.getElementById('header-date-badge').innerText = trip.dates;
             document.getElementById('header-trip-title').innerText = trip.title;
-            document.getElementById('header-buddies-badge').innerText = `👥 ${trip.buddies.join(' & ')}`;
+            document.getElementById('header-buddies-badge').innerText = `👥 ${trip.buddies.join(' & ')} ✏️`;
 
             renderDayTabs();
             renderItinerary();
             renderShopping();
             renderExpenseSection();
             renderLuggage();
-            document.getElementById('flight-info-box').innerText = trip.flightInfo || '尚未填寫航班與住宿資訊，點擊右上角「編輯」新增。';
+            renderFlightAndHotelCards();
         }
 
         function switchTab(tabName) {
@@ -384,17 +512,14 @@
             activeBtn.classList.add('text-[#E8927C]', 'font-bold');
         }
 
-        // --- 行程渲染 ---
         function renderDayTabs() {
             const trip = getActiveTrip();
             if (!trip.days.some(d => d.day === currentDay)) currentDay = trip.days[0]?.day || 1;
-            const container = document.getElementById('day-tabs');
-            container.innerHTML = trip.days.map(d => `
+            document.getElementById('day-tabs').innerHTML = trip.days.map(d => `
                 <button onclick="switchDay(${d.day})" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition ${d.day === currentDay ? 'bg-[#E8927C] text-white shadow-sm' : 'bg-white text-gray-500 border border-[#EFECE6]'}">
                     ${d.label}
                 </button>
             `).join('');
-
             const activeDayObj = trip.days.find(d => d.day === currentDay) || trip.days[0];
             if (activeDayObj) {
                 document.getElementById('weather-loc').innerText = activeDayObj.weather;
@@ -402,57 +527,177 @@
             }
         }
 
-        function switchDay(day) {
-            currentDay = day;
-            renderDayTabs();
-            renderItinerary();
-        }
-
+        function switchDay(day) { currentDay = day; renderDayTabs(); renderItinerary(); }
         function addNewDay() {
             const trip = getActiveTrip();
             const nextNum = trip.days.length + 1;
-            const label = prompt('請輸入新天數標題（例如：Day 5 弘大・延南洞）：', `Day ${nextNum} 自由探索`);
+            const label = prompt('請輸入新天數標題：', `Day ${nextNum}`);
             if (!label) return;
             trip.days.push({ day: nextNum, label, weather: `${trip.title} ・ 天氣晴朗`, tip: '祝旅途愉快！' });
-            currentDay = nextNum;
-            saveStore();
-            renderDayTabs();
-            renderItinerary();
+            currentDay = nextNum; saveStore(); renderDayTabs(); renderItinerary();
+        }
+
+        function setItineraryView(mode) {
+            itineraryViewMode = mode;
+            const btnList = document.getElementById('view-btn-list');
+            const btnMap = document.getElementById('view-btn-map');
+            const listEl = document.getElementById('itinerary-list');
+            const mapEl = document.getElementById('itinerary-map-view');
+
+            if (mode === 'list') {
+                btnList.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs';
+                btnMap.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500';
+                listEl.classList.remove('hidden'); mapEl.classList.add('hidden');
+            } else {
+                btnMap.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs';
+                btnList.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500';
+                mapEl.classList.remove('hidden'); listEl.classList.add('hidden');
+                renderMapMode();
+            }
         }
 
         function renderItinerary() {
             const trip = getActiveTrip();
-            const list = document.getElementById('itinerary-list');
             const items = trip.itinerary.filter(i => i.day === currentDay);
+            const isKorea = trip.currency === 'KRW' || (trip.title && trip.title.includes('首爾'));
+            const mapName = isKorea ? 'Naver 導航' : 'Google 導航';
+
+            document.getElementById('itinerary-list').innerHTML = items.length === 0 ? 
+                `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">這一天尚無行程，點右下角 AI 助手新增！</div>` :
+                items.map(item => `
+                    <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${item.type.includes('餐廳') ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}">${item.time} ・ ${item.type}</span>
+                                <h3 class="text-sm font-bold text-[#3D3A36] mt-1">${item.title}</h3>
+                            </div>
+                            <a href="${getMapUrl(item.location)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shadow-xs shrink-0">
+                                🧭 ${mapName}
+                            </a>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            ${(item.tags || []).map(t => `<span class="text-[10px] bg-[#FDF2EE] text-[#D9775E] px-2 py-0.5 rounded-full font-bold"># ${t}</span>`).join('')}
+                        </div>
+                        <p class="text-xs text-gray-600 bg-[#FDFBF7] p-2.5 rounded-xl border border-[#F3EFE6] leading-relaxed">${item.note}</p>
+                    </div>
+                `).join('');
+
+            if (itineraryViewMode === 'map') renderMapMode();
+        }
+
+        function renderMapMode() {
+            const trip = getActiveTrip();
+            const items = trip.itinerary.filter(i => i.day === currentDay);
+            const isKorea = trip.currency === 'KRW' || (trip.title && trip.title.includes('首爾'));
+            const mapName = isKorea ? 'Naver 導航' : 'Google 導航';
+
+            document.getElementById('map-title-label').innerText = isKorea ? '📍 韓國 Naver Map 景點預覽' : '📍 Google Maps 景點預覽';
+            document.getElementById('map-engine-badge').innerText = isKorea ? 'Naver Map 引擎' : 'Google Maps 引擎';
+            document.getElementById('map-tip-text').innerText = isKorea ? '💡 點擊下方按鈕將自動開啟 Naver Map 導航。' : '💡 點擊下方按鈕將自動開啟 Google Maps 導航。';
+
+            const iframeContainer = document.getElementById('map-iframe-container');
+            const mapListContainer = document.getElementById('itinerary-map-list');
+
             if (items.length === 0) {
-                list.innerHTML = `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">這一天還沒有安排行程，點擊右下角「✨ AI 導遊助手」新增景點或餐廳吧！</div>`;
+                iframeContainer.innerHTML = `<p class="text-xs text-gray-400">今日尚無景點</p>`;
+                mapListContainer.innerHTML = '';
                 return;
             }
-            list.innerHTML = items.map(item => `
-                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2">
-                    <div class="flex justify-between items-start gap-2">
-                        <div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${item.type.includes('餐廳') ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}">${item.time} ・ ${item.type}</span>
-                            <h3 class="text-sm font-bold text-[#3D3A36] mt-1">${item.title}</h3>
+
+            const primaryLoc = encodeURIComponent(items[0].location || items[0].title);
+            iframeContainer.innerHTML = `<iframe width="100%" height="100%" frameborder="0" scrolling="no" src="https://maps.google.com/maps?q=${primaryLoc}&t=&z=14&ie=UTF8&iwloc=&output=embed"></iframe>`;
+
+            mapListContainer.innerHTML = items.map((item, idx) => `
+                <div class="bg-white rounded-xl p-3 border border-[#EFECE6] flex justify-between items-center text-xs">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-6 h-6 rounded-full bg-[#E8927C] text-white font-bold flex items-center justify-center text-[11px] shrink-0">${idx + 1}</span>
+                        <div class="min-w-0">
+                            <p class="font-bold text-[#3D3A36] truncate">${item.title}</p>
+                            <p class="text-[10px] text-gray-400 truncate">📍 ${item.location} ・ ${item.time}</p>
                         </div>
-                        <a href="https://map.naver.com/v5/search/${encodeURIComponent(item.location)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shadow-xs shrink-0">
-                            🧭 地圖導航
-                        </a>
                     </div>
-                    <div class="flex flex-wrap gap-1">
-                        ${(item.tags || []).map(t => `<span class="text-[10px] bg-[#FDF2EE] text-[#D9775E] px-2 py-0.5 rounded-full font-bold"># ${t}</span>`).join('')}
-                    </div>
-                    <p class="text-xs text-gray-600 bg-[#FDFBF7] p-2.5 rounded-xl border border-[#F3EFE6] leading-relaxed">${item.note}</p>
+                    <a href="${getMapUrl(item.location)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shrink-0 ml-2">
+                        ${mapName}
+                    </a>
                 </div>
             `).join('');
         }
 
-        // --- 購物清單渲染 ---
-        function setShopFilter(storeName) {
-            shopFilter = storeName;
-            renderShopping();
+        // --- ✈️ 與 🏨 結構化獨立專區渲染與編輯 ---
+        function renderFlightAndHotelCards() {
+            const trip = getActiveTrip();
+            const f = trip.flight || { outbound: { airline: '未填寫', flightNo: '', date: '', dep: '', arr: '', terminal: '', code: '' }, inbound: { airline: '未填寫', flightNo: '', date: '', dep: '', arr: '', terminal: '', code: '' } };
+            const h = trip.hotel || { name: '未填寫', address: '', phone: '', bookingNo: '', nights: '', subway: '', bus: '' };
+
+            // 渲染航班卡片
+            document.getElementById('flight-card-container').innerHTML = `
+                <div class="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6] space-y-2">
+                    <div class="flex justify-between items-center border-b border-[#EFECE6] pb-2">
+                        <div>
+                            <span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">去程 ✈️ ${f.outbound.date}</span>
+                            <p class="font-bold text-[#3D3A36] mt-1">${f.outbound.airline} (${f.outbound.flightNo})</p>
+                            <p class="text-[11px] text-gray-500">${f.outbound.dep} → ${f.outbound.arr} ・ ${f.outbound.terminal}</p>
+                        </div>
+                        <span class="text-[11px] bg-amber-100 text-amber-800 px-2 py-1 rounded font-mono font-bold">代號: ${f.outbound.code}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">回程 ✈️ ${f.inbound.date}</span>
+                        <p class="font-bold text-[#3D3A36] mt-1">${f.inbound.airline} (${f.inbound.flightNo})</p>
+                        <p class="text-[11px] text-gray-500">${f.inbound.dep} → ${f.inbound.arr} ・ ${f.inbound.terminal}</p>
+                    </div>
+                </div>
+            `;
+
+            // 渲染住宿卡片
+            document.getElementById('hotel-card-container').innerHTML = `
+                <div class="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6] space-y-2">
+                    <div>
+                        <p class="text-sm font-bold text-[#3D3A36]">${h.name}</p>
+                        <p class="text-[11px] text-gray-500 mt-0.5">📍 地址：${h.address}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] bg-white p-2 rounded-lg border border-[#EFECE6]">
+                        <p class="text-gray-600">📞 電話：<br><strong>${h.phone}</strong></p>
+                        <p class="text-gray-600">📋 訂房編號：<br><strong class="bg-amber-100 px-1 rounded">${h.bookingNo}</strong></p>
+                    </div>
+                    <div class="space-y-1 pt-1 border-t border-[#EFECE6] text-[11px]">
+                        <p class="text-[#3E6B52]">🚇 <strong>最近地鐵站：</strong>${h.subway}</p>
+                        <p class="text-[#3A5A78]">🚌 <strong>鄰近公交車：</strong>${h.bus}</p>
+                    </div>
+                </div>
+            `;
         }
 
+        function editFlightInfo() {
+            const trip = getActiveTrip();
+            const airline = prompt('輸入航空公司：', trip.flight.outbound.airline);
+            if (!airline) return;
+            const code = prompt('輸入去程航班號與訂位代號 (例如：BR160 / 訂位代號 XK92LM)：', 'BR160 / XK92LM');
+            trip.flight.outbound.airline = airline;
+            trip.flight.outbound.flightNo = code;
+            saveStore();
+            renderFlightAndHotelCards();
+            alert('航班資料已更新！');
+        }
+
+        function editHotelInfo() {
+            const trip = getActiveTrip();
+            const name = prompt('輸入飯店名稱：', trip.hotel.name);
+            if (!name) return;
+            const address = prompt('輸入飯店詳細地址：', trip.hotel.address);
+            const subway = prompt('輸入鄰近地鐵站與出口：', trip.hotel.subway);
+            const bus = prompt('輸入鄰近公交車路線與站牌：', trip.hotel.bus);
+
+            trip.hotel.name = name;
+            trip.hotel.address = address || trip.hotel.address;
+            trip.hotel.subway = subway || trip.hotel.subway;
+            trip.hotel.bus = bus || trip.hotel.bus;
+            saveStore();
+            renderFlightAndHotelCards();
+            alert('住宿交通資訊已更新！');
+        }
+
+        // --- 購物與其他標準功能 ---
+        function setShopFilter(storeName) { shopFilter = storeName; renderShopping(); }
         function renderShopping() {
             const trip = getActiveTrip();
             const meta = CURRENCY_META[trip.currency] || CURRENCY_META.KRW;
@@ -465,64 +710,116 @@
             const query = document.getElementById('shop-search').value.toLowerCase();
             const filtered = trip.shopping.filter(item => {
                 const matchStore = shopFilter === '全部' || item.store === shopFilter;
-                const matchText = item.name.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query) || item.store.toLowerCase().includes(query);
+                const matchText = item.name.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query);
                 return matchStore && matchText;
             });
 
-            const list = document.getElementById('shopping-list');
-            if (filtered.length === 0) {
-                list.innerHTML = `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">目前購物清單是空的，按右下角「✨ AI 導遊助手」新增想買的伴手禮吧！</div>`;
-                return;
-            }
-
-            list.innerHTML = filtered.map(item => `
-                <div onclick="toggleShopItem(${item.id})" class="bg-white rounded-2xl p-3.5 border border-[#EFECE6] shadow-sm flex items-center justify-between cursor-pointer ${item.bought ? 'opacity-50' : ''}">
-                    <div class="flex items-start gap-3">
-                        <input type="checkbox" ${item.bought ? 'checked' : ''} class="mt-1 accent-[#E8927C] w-4 h-4">
-                        <div>
-                            <span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-bold">${item.store}</span>
-                            <h4 class="text-xs font-bold text-[#3D3A36] mt-1 ${item.bought ? 'line-through' : ''}">${item.name}</h4>
-                            <p class="text-[11px] text-gray-500 mt-0.5">${item.desc}</p>
+            document.getElementById('shopping-list').innerHTML = filtered.length === 0 ?
+                `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">目前沒有符合的商品</div>` :
+                filtered.map(item => {
+                    const imgSrc = item.image || makeSvgCard('#F3EFE6', '#7A7267', '🛍️', item.store);
+                    const priceDisplay = item.price && item.price > 0 ? `<span class="text-xs font-bold text-[#E8927C]">${meta.symbol}${item.price.toLocaleString()}</span>` : '';
+                    return `
+                    <div class="bg-white rounded-2xl p-3 border border-[#EFECE6] shadow-sm flex gap-3 transition ${item.bought ? 'opacity-55' : ''}">
+                        <div class="relative w-24 h-24 shrink-0">
+                            <img onclick="openLightbox('${item.id}')" src="${imgSrc}" class="w-24 h-24 rounded-xl object-cover border border-[#EFECE6] cursor-zoom-in bg-[#FDFBF7]">
+                            <button onclick="triggerQuickImageUpload(${item.id})" class="absolute bottom-1 right-1 bg-black/65 text-white text-[9px] px-1.5 py-0.5 rounded-md">📷 換圖</button>
                         </div>
-                    </div>
-                    <div class="text-right shrink-0 ml-2">
-                        <p class="text-xs font-bold text-[#E8927C]">${meta.symbol}${item.price.toLocaleString()}</p>
-                        <p class="text-[10px] text-gray-400">≈ HK$${Math.round(item.price * trip.rateToHKD)}</p>
-                    </div>
-                </div>
-            `).join('');
+                        <div class="flex-1 min-w-0 flex flex-col justify-between">
+                            <div>
+                                <span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-bold">${item.store}</span>
+                                <h4 class="text-xs font-bold text-[#3D3A36] mt-1 ${item.bought ? 'line-through' : ''}">${item.name}</h4>
+                                <p class="text-[11px] text-gray-500 mt-1 bg-[#FDFBF7] p-1.5 rounded-lg border border-[#F3EFE6]">${item.desc}</p>
+                            </div>
+                            <div class="flex items-center justify-between mt-1 pt-1 border-t border-[#F7F4EE]">
+                                <div>${priceDisplay}</div>
+                                <button onclick="deleteShopItem(${item.id})" class="text-[10px] text-gray-300 hover:text-red-400">刪除</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
         }
 
         function toggleShopItem(id) {
             const trip = getActiveTrip();
             const item = trip.shopping.find(i => i.id === id);
             if (item) item.bought = !item.bought;
-            saveStore();
-            renderShopping();
+            saveStore(); renderShopping();
         }
 
-        // --- 多幣別記帳與匯率 ---
+        function deleteShopItem(id) {
+            const trip = getActiveTrip();
+            if (confirm('刪除商品？')) { trip.shopping = trip.shopping.filter(i => i.id !== id); saveStore(); renderShopping(); }
+        }
+
+        function openAddShopModal() {
+            pendingNewShopImage = '';
+            document.getElementById('new-shop-img-preview').src = 'https://placehold.co/160x160/F3EFE6/9C9488?text=📷+上傳圖片';
+            document.getElementById('new-shop-name').value = '';
+            document.getElementById('new-shop-store').value = '';
+            document.getElementById('new-shop-price').value = '';
+            document.getElementById('new-shop-desc').value = '';
+            document.getElementById('add-shop-modal').classList.remove('hidden');
+        }
+
+        function closeAddShopModal() { document.getElementById('add-shop-modal').classList.add('hidden'); }
+        function previewNewShopImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            compressImageFile(file, (base64) => { pendingNewShopImage = base64; document.getElementById('new-shop-img-preview').src = base64; });
+        }
+
+        function saveNewShopItem() {
+            const trip = getActiveTrip();
+            const name = document.getElementById('new-shop-name').value.trim();
+            if (!name) return alert('請輸入商品名稱');
+            trip.shopping.unshift({
+                id: Date.now(), name,
+                store: document.getElementById('new-shop-store').value.trim() || '必買清單',
+                price: parseFloat(document.getElementById('new-shop-price').value) || 0,
+                desc: document.getElementById('new-shop-desc').value.trim() || '',
+                image: pendingNewShopImage || makeSvgCard('#FDF2EE', '#D9775E', '🛍️', '清單'),
+                bought: false
+            });
+            saveStore(); renderShopping(); closeAddShopModal();
+        }
+
+        function triggerQuickImageUpload(id) { targetQuickUploadShopId = id; document.getElementById('quick-img-upload').click(); }
+        function handleQuickImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !targetQuickUploadShopId) return;
+            compressImageFile(file, (base64) => {
+                const trip = getActiveTrip();
+                const item = trip.shopping.find(i => i.id === targetQuickUploadShopId);
+                if (item) { item.image = base64; saveStore(); renderShopping(); }
+                event.target.value = '';
+            });
+        }
+
+        function openLightbox(id) {
+            const trip = getActiveTrip();
+            const item = trip.shopping.find(i => String(i.id) === String(id));
+            if (!item) return;
+            document.getElementById('lightbox-img').src = item.image || makeSvgCard('#F3EFE6', '#7A7267', '🛍️', item.store);
+            document.getElementById('lightbox-caption').innerText = `${item.store}｜${item.name}`;
+            document.getElementById('lightbox-modal').classList.remove('hidden');
+        }
+        function closeLightbox() { document.getElementById('lightbox-modal').classList.add('hidden'); }
+
+        // --- 記帳與匯率 ---
         function changeTripCurrency() {
             const trip = getActiveTrip();
             const newCurr = document.getElementById('exp-currency-select').value;
             trip.currency = newCurr;
             trip.rateToHKD = CURRENCY_META[newCurr].defaultRate;
             trip.rateMode = '預設匯率';
-            saveStore();
-            renderExpenseSection();
-            renderShopping();
+            saveStore(); renderExpenseSection(); renderShopping();
         }
 
         function setManualRate() {
             const trip = getActiveTrip();
             const val = parseFloat(document.getElementById('exp-rate-input').value);
-            if (!isNaN(val) && val > 0) {
-                trip.rateToHKD = val;
-                trip.rateMode = '手動固定匯率';
-                saveStore();
-                renderExpenseSection();
-                renderShopping();
-            }
+            if (!isNaN(val) && val > 0) { trip.rateToHKD = val; trip.rateMode = '手動固定匯率'; saveStore(); renderExpenseSection(); renderShopping(); }
         }
 
         async function fetchLiveRate() {
@@ -534,112 +831,73 @@
                 const data = await res.json();
                 if (data && data.rates && data.rates.HKD) {
                     trip.rateToHKD = Number(data.rates.HKD.toFixed(5));
-                    trip.rateMode = `即時自動匯率 (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
-                    saveStore();
-                    renderExpenseSection();
-                    renderShopping();
+                    trip.rateMode = '即時自動匯率';
+                    saveStore(); renderExpenseSection(); renderShopping();
                     btn.innerText = '✅ 已更新';
-                } else {
-                    throw new Error('API format');
-                }
-            } catch (e) {
-                alert('目前無法連線取得即時匯率，你也可以直接在右側輸入框手動設定固定匯率！');
-                btn.innerText = '🔄 自動更新匯率';
-            }
+                } else { throw new Error(); }
+            } catch (e) { alert('無法取得即時匯率'); btn.innerText = '🔄 自動更新匯率'; }
             setTimeout(() => { btn.innerText = '🔄 自動更新匯率'; }, 2000);
         }
 
         function renderExpenseSection() {
             const trip = getActiveTrip();
             const meta = CURRENCY_META[trip.currency] || CURRENCY_META.KRW;
-
             document.getElementById('exp-currency-select').value = trip.currency;
             document.getElementById('exp-rate-input').value = trip.rateToHKD;
             document.getElementById('rate-status-text').innerText = `目前使用：${trip.rateMode} (1 ${trip.currency} = ${trip.rateToHKD} HKD)`;
-            document.getElementById('exp-amount').placeholder = `${meta.name}金額 (${trip.currency})`;
-
-            // 付款人選單
+            document.getElementById('exp-amount').placeholder = `${meta.name}金額`;
             document.getElementById('exp-payer').innerHTML = trip.buddies.map(b => `<option value="${b}">💳 ${b} 先墊付</option>`).join('');
 
-            // 分帳計算
             let paidMap = {}, shareMap = {};
             trip.buddies.forEach(b => { paidMap[b] = 0; shareMap[b] = 0; });
-
             trip.expenses.forEach(exp => {
                 paidMap[exp.payer] = (paidMap[exp.payer] || 0) + exp.amount;
                 if (exp.split === 'all') {
                     const per = exp.amount / trip.buddies.length;
                     trip.buddies.forEach(b => shareMap[b] += per);
-                } else {
-                    shareMap[exp.payer] += exp.amount;
-                }
+                } else { shareMap[exp.payer] = (shareMap[exp.payer] || 0) + exp.amount; }
             });
 
-            const settlementBox = document.getElementById('settlement-box');
-            if (trip.expenses.length === 0) {
-                settlementBox.innerHTML = `<p class="text-gray-400">尚無消費紀錄，記帳後自動計算分帳與港幣金額！</p>`;
-            } else {
-                settlementBox.innerHTML = trip.buddies.map(b => {
-                    const diff = Math.round(paidMap[b] - shareMap[b]);
+            document.getElementById('settlement-box').innerHTML = trip.expenses.length === 0 ?
+                `<p class="text-gray-400">尚無消費紀錄</p>` :
+                trip.buddies.map(b => {
+                    const diff = Math.round((paidMap[b] || 0) - (shareMap[b] || 0));
                     const hkdDiff = Math.round(Math.abs(diff) * trip.rateToHKD);
                     if (diff > 0) return `<p class="text-emerald-700">🟢 <strong>${b}</strong> 應收回：<strong>${meta.symbol}${diff.toLocaleString()}</strong> (≈ HK$${hkdDiff})</p>`;
                     if (diff < 0) return `<p class="text-rose-600">🔴 <strong>${b}</strong> 應支付：<strong>${meta.symbol}${Math.abs(diff).toLocaleString()}</strong> (≈ HK$${hkdDiff})</p>`;
                     return `<p class="text-gray-500">⚪ <strong>${b}</strong> 已結清</p>`;
                 }).join('');
-            }
 
-            const expList = document.getElementById('expense-list');
-            expList.innerHTML = trip.expenses.slice().reverse().map(exp => `
+            document.getElementById('expense-list').innerHTML = trip.expenses.slice().reverse().map(exp => `
                 <div class="bg-white rounded-xl p-3 border border-[#EFECE6] flex justify-between items-center text-xs">
                     <div>
                         <p class="font-bold text-[#3D3A36]">${exp.title}</p>
-                        <p class="text-[10px] text-gray-400">${exp.payer} 付款 ・ ${exp.split === 'all' ? '全員平分' : '各自負擔'}</p>
+                        <p class="text-[10px] text-gray-400">${exp.payer} 付款</p>
                     </div>
                     <div class="text-right">
                         <p class="font-bold text-[#3D3A36]">${meta.symbol}${exp.amount.toLocaleString()}</p>
                         <p class="text-[10px] text-gray-400">HK$${Math.round(exp.amount * trip.rateToHKD)}</p>
                     </div>
-                </div>
-            `).join('');
-        }
-
-        function addBuddyToTrip() {
-            const trip = getActiveTrip();
-            const name = prompt('請輸入新旅伴名稱：');
-            if (name && name.trim() && !trip.buddies.includes(name.trim())) {
-                trip.buddies.push(name.trim());
-                saveStore();
-                renderAll();
-            }
+                </div>`).join('');
         }
 
         function addExpense() {
             const trip = getActiveTrip();
             const title = document.getElementById('exp-title').value.trim();
             const amount = parseFloat(document.getElementById('exp-amount').value);
-            const payer = document.getElementById('exp-payer').value;
-            const split = document.getElementById('exp-split').value;
-            if (!title || isNaN(amount) || amount <= 0) return alert('請輸入項目與正確金額！');
-
-            trip.expenses.push({ id: Date.now(), title, amount, payer, split });
-            document.getElementById('exp-title').value = '';
-            document.getElementById('exp-amount').value = '';
-            saveStore();
-            renderExpenseSection();
+            if (!title || isNaN(amount) || amount <= 0) return alert('請輸入完整金額');
+            trip.expenses.push({ id: Date.now(), title, amount, payer: document.getElementById('exp-payer').value, split: document.getElementById('exp-split').value });
+            document.getElementById('exp-title').value = ''; document.getElementById('exp-amount').value = '';
+            saveStore(); renderExpenseSection();
         }
 
-        // --- 智慧自動分類行李清單 ---
-        function setLuggageCatFilter(cat) {
-            luggageCatFilter = cat;
-            renderLuggage();
-        }
-
+        // --- 行李清單 ---
+        function setLuggageCatFilter(cat) { luggageCatFilter = cat; renderLuggage(); }
         function renderLuggage() {
             const trip = getActiveTrip();
             const total = trip.luggage.length;
             const done = trip.luggage.filter(i => i.checked).length;
             const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-
             document.getElementById('luggage-progress-text').innerText = `已收拾 ${done} / ${total} 項 (${pct}%)`;
             document.getElementById('luggage-progress-bar').style.width = `${pct}%`;
 
@@ -649,14 +907,7 @@
             `).join('');
 
             const filtered = trip.luggage.filter(i => luggageCatFilter === '全部' || i.cat === luggageCatFilter);
-            const list = document.getElementById('luggage-list');
-            
-            if (filtered.length === 0) {
-                list.innerHTML = `<p class="text-center text-xs text-gray-400 py-4">此分類目前沒有物品</p>`;
-                return;
-            }
-
-            list.innerHTML = filtered.map(item => `
+            document.getElementById('luggage-list').innerHTML = filtered.map(item => `
                 <div class="flex items-center justify-between bg-[#FDFBF7] px-3 py-2 rounded-xl border border-[#EFECE6]">
                     <label class="flex items-center gap-2.5 flex-1 cursor-pointer">
                         <input type="checkbox" onchange="toggleLuggage(${item.id})" ${item.checked ? 'checked' : ''} class="accent-[#7FB093] w-4 h-4">
@@ -664,8 +915,7 @@
                         <span class="text-xs ${item.checked ? 'line-through text-gray-400' : 'text-[#3D3A36] font-medium'}">${item.name}</span>
                     </label>
                     <button onclick="deleteLuggage(${item.id})" class="text-gray-300 hover:text-red-400 text-xs ml-2">✕</button>
-                </div>
-            `).join('');
+                </div>`).join('');
         }
 
         function addLuggageItem() {
@@ -673,169 +923,110 @@
             const input = document.getElementById('luggage-input');
             const name = input.value.trim();
             if (!name) return;
-
-            const autoCat = autoClassifyLuggage(name);
-            trip.luggage.unshift({ id: Date.now(), cat: autoCat, name, checked: false });
-            input.value = '';
-            saveStore();
-            renderLuggage();
+            trip.luggage.unshift({ id: Date.now(), cat: autoClassifyLuggage(name), name, checked: false });
+            input.value = ''; saveStore(); renderLuggage();
         }
 
-        function toggleLuggage(id) {
-            const trip = getActiveTrip();
-            const item = trip.luggage.find(i => i.id === id);
-            if (item) item.checked = !item.checked;
-            saveStore();
-            renderLuggage();
-        }
+        function toggleLuggage(id) { const trip = getActiveTrip(); const i = trip.luggage.find(x => x.id === id); if (i) i.checked = !i.checked; saveStore(); renderLuggage(); }
+        function deleteLuggage(id) { const trip = getActiveTrip(); trip.luggage = trip.luggage.filter(x => x.id !== id); saveStore(); renderLuggage(); }
+        function resetLuggage() { const trip = getActiveTrip(); trip.luggage.forEach(i => i.checked = false); saveStore(); renderLuggage(); }
+        function exportTripPDF() { window.print(); }
 
-        function deleteLuggage(id) {
-            const trip = getActiveTrip();
-            trip.luggage = trip.luggage.filter(i => i.id !== id);
-            saveStore();
-            renderLuggage();
-        }
-
-        function resetLuggage() {
-            const trip = getActiveTrip();
-            if (confirm('確定要將此趟旅行的行李清單恢復為未勾選狀態嗎？')) {
-                trip.luggage.forEach(i => i.checked = false);
-                saveStore();
-                renderLuggage();
-            }
-        }
-
-        function editFlightNote() {
-            const trip = getActiveTrip();
-            const updated = prompt('編輯航班與住宿資訊（可用 \\n 換行）：', trip.flightInfo);
-            if (updated !== null) {
-                trip.flightInfo = updated;
-                saveStore();
-                renderAll();
-            }
-        }
-
-        // --- 多趟旅行管理 (切換 / 新建 / 回顧舊紀錄) ---
+        // --- 檔案庫與編輯 ---
         function openTripModal() {
-            const container = document.getElementById('trip-list-container');
-            container.innerHTML = store.trips.map(t => {
-                const isActive = t.id === store.activeTripId;
-                return `
-                    <div onclick="selectTrip('${t.id}')" class="p-3.5 rounded-2xl border cursor-pointer flex justify-between items-center transition ${isActive ? 'bg-[#FDF2EE] border-[#E8927C]' : 'bg-white border-[#EFECE6]'}">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-[#3D3A36]">${t.title}</span>
-                                ${isActive ? '<span class="text-[10px] bg-[#E8927C] text-white px-2 py-0.5 rounded-full font-bold">目前檢視中</span>' : ''}
-                            </div>
-                            <p class="text-[11px] text-gray-500 mt-0.5">${t.dates} ・ 貨幣：${t.currency} ・ 旅伴：${t.buddies.join('、')}</p>
+            document.getElementById('trip-list-container').innerHTML = store.trips.map(t => `
+                <div class="p-3.5 rounded-2xl border flex justify-between items-center gap-2 transition ${t.id === store.activeTripId ? 'bg-[#FDF2EE] border-[#E8927C]' : 'bg-white border-[#EFECE6]'}">
+                    <div onclick="selectTrip('${t.id}')" class="flex-1 cursor-pointer min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-[#3D3A36] truncate">${t.title}</span>
+                            ${t.id === store.activeTripId ? '<span class="text-[10px] bg-[#E8927C] text-white px-2 py-0.5 rounded-full font-bold">目前檢視</span>' : ''}
                         </div>
-                        <span class="text-gray-400 text-xs">切換 →</span>
+                        <p class="text-[11px] text-gray-500 mt-0.5">${t.dates}</p>
                     </div>
-                `;
-            }).join('');
+                    <button onclick="openEditTripModal('${t.id}')" class="text-[11px] bg-white border border-[#EFECE6] text-[#3D3A36] px-2.5 py-1.5 rounded-xl font-bold">✏️ 編輯</button>
+                </div>`).join('');
             document.getElementById('trip-modal').classList.remove('hidden');
         }
 
-        function closeTripModal() {
-            document.getElementById('trip-modal').classList.add('hidden');
+        function closeTripModal() { document.getElementById('trip-modal').classList.add('hidden'); }
+        function selectTrip(id) { store.activeTripId = id; currentDay = 1; saveStore(); renderAll(); closeTripModal(); }
+
+        function openEditTripModal(id) {
+            editingTripId = id;
+            const trip = store.trips.find(t => t.id === id);
+            if (!trip) return;
+            document.getElementById('edit-trip-title-input').value = trip.title;
+            document.getElementById('edit-trip-dates-input').value = trip.dates;
+            tempEditBuddies = [...trip.buddies];
+            renderEditBuddiesChips();
+            closeTripModal();
+            document.getElementById('edit-trip-modal').classList.remove('hidden');
         }
 
-        function selectTrip(tripId) {
-            store.activeTripId = tripId;
-            currentDay = 1;
-            shopFilter = '全部';
-            luggageCatFilter = '全部';
-            saveStore();
-            renderAll();
-            closeTripModal();
+        function closeEditTripModal() { document.getElementById('edit-trip-modal').classList.add('hidden'); }
+        function renderEditBuddiesChips() {
+            document.getElementById('edit-buddies-chips').innerHTML = tempEditBuddies.map((b, idx) => `
+                <span class="inline-flex items-center gap-1.5 bg-[#E3EFE8] text-[#3E6B52] text-xs font-bold px-3 py-1 rounded-full">
+                    👤 ${b} ${tempEditBuddies.length > 1 ? `<button onclick="removeBuddyInModal(${idx})" class="text-[#3E6B52]/60 hover:text-red-500 ml-0.5">✕</button>` : ''}
+                </span>`).join('');
+        }
+
+        function addBuddyInModal() {
+            const input = document.getElementById('add-buddy-input');
+            const name = input.value.trim();
+            if (name && !tempEditBuddies.includes(name)) { tempEditBuddies.push(name); renderEditBuddiesChips(); }
+            input.value = '';
+        }
+
+        function removeBuddyInModal(idx) { tempEditBuddies.splice(idx, 1); renderEditBuddiesChips(); }
+
+        function saveEditedTrip() {
+            const trip = store.trips.find(t => t.id === editingTripId);
+            if (!trip) return;
+            trip.title = document.getElementById('edit-trip-title-input').value.trim() || trip.title;
+            trip.dates = document.getElementById('edit-trip-dates-input').value.trim() || trip.dates;
+            trip.buddies = tempEditBuddies.length > 0 ? [...tempEditBuddies] : ['我'];
+            saveStore(); renderAll(); closeEditTripModal();
         }
 
         function createNewTrip() {
             const title = document.getElementById('new-trip-title').value.trim();
             const dates = document.getElementById('new-trip-dates').value.trim() || '待定日期';
             const currency = document.getElementById('new-trip-currency').value;
-            const buddiesRaw = document.getElementById('new-trip-buddies').value;
-            const buddies = buddiesRaw.split(/[,，、]/).map(s => s.trim()).filter(Boolean);
-
-            if (!title) return alert('請輸入新旅行的名稱（例如：日本東京之旅）！');
+            const buddies = document.getElementById('new-trip-buddies').value.split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+            if (!title) return alert('請輸入旅行名稱');
 
             const newTrip = {
                 id: 'trip_' + Date.now(),
-                title,
-                dates,
-                currency,
+                title, dates, currency,
                 rateToHKD: CURRENCY_META[currency].defaultRate,
                 rateMode: '預設匯率',
                 buddies: buddies.length > 0 ? buddies : ['我'],
-                days: [
-                    { day: 1, label: 'Day 1 抵達與市區探索', weather: `${title} ・ 天氣晴朗`, tip: '開啟美好旅程的第一天！' }
-                ],
-                itinerary: [],
-                shopping: [],
-                expenses: [],
-                luggage: [
-                    { id: 101, cat: '證件錢財', name: '護照（確認有效期 6 個月以上）', checked: false },
-                    { id: 102, cat: '證件錢財', name: '電子機票、當地網卡 / eSIM', checked: false },
-                    { id: 103, cat: '證件錢財', name: '當地現金 ＋ 海外信用卡', checked: false },
-                    { id: 104, cat: '3C電子', name: '手機充電線、轉接頭、行動電源', checked: false },
-                    { id: 105, cat: '保暖衣物', name: '換洗衣物、睡衣、舒適走路鞋', checked: false },
-                    { id: 106, cat: '常備藥品', name: '個人常備藥、OK繃', checked: false }
-                ],
-                flightInfo: `✈️ 旅程：${title} (${dates})\n點擊右上角「編輯」填寫詳細航班與飯店資訊。`
+                days: [{ day: 1, label: 'Day 1 抵達與探索', weather: `${title} ・ 天氣晴朗`, tip: '祝旅途愉快！' }],
+                itinerary: [], shopping: [], expenses: [], luggage: [],
+                flight: { outbound: { airline: '未填寫', flightNo: '', date: '', dep: '', arr: '', terminal: '', code: '' }, inbound: { airline: '未填寫', flightNo: '', date: '', dep: '', arr: '', terminal: '', code: '' } },
+                hotel: { name: '未填寫飯店', address: '', phone: '', bookingNo: '', nights: '', subway: '', bus: '' }
             };
-
             store.trips.unshift(newTrip);
             store.activeTripId = newTrip.id;
-            currentDay = 1;
-            saveStore();
-            renderAll();
-            closeTripModal();
-            document.getElementById('new-trip-title').value = '';
-            document.getElementById('new-trip-dates').value = '';
+            currentDay = 1; saveStore(); renderAll(); closeTripModal();
         }
 
-        // --- AI 導遊快速新增 ---
-        function toggleAIModal() {
-            document.getElementById('ai-modal').classList.toggle('hidden');
-        }
-
+        function toggleAIModal() { document.getElementById('ai-modal').classList.toggle('hidden'); }
         function processAIInput(target) {
             const trip = getActiveTrip();
             const text = document.getElementById('ai-input').value.trim();
-            if (!text) return alert('請輸入內容！');
-
+            if (!text) return alert('請輸入內容');
             if (target === 'itinerary') {
-                trip.itinerary.push({
-                    day: currentDay,
-                    type: '新增行程',
-                    time: '彈性時間',
-                    title: text.slice(0, 20),
-                    location: text.slice(0, 20),
-                    tags: ['AI 新增'],
-                    note: `備註：${text}`
-                });
-                saveStore();
-                renderItinerary();
-                switchTab('itinerary');
+                trip.itinerary.push({ day: currentDay, type: '新增行程', time: '彈性', title: text, location: text, tags: ['AI新增'], note: text });
+                saveStore(); renderItinerary(); switchTab('itinerary');
             } else {
-                const storeGuess = text.includes('Daiso') || text.includes('大創') ? 'Daiso 大創' : (text.includes('Olive') ? 'Olive Young' : (text.includes('藥妝') ? '藥妝店' : '必買清單'));
-                trip.shopping.unshift({
-                    id: Date.now(),
-                    name: text,
-                    store: storeGuess,
-                    price: 1000,
-                    desc: '透過 AI 導遊助手新增',
-                    bought: false
-                });
-                saveStore();
-                renderShopping();
-                switchTab('shopping');
+                trip.shopping.unshift({ id: Date.now(), name: text, store: '必買清單', price: 0, desc: 'AI新增', image: makeSvgCard('#FDF2EE', '#D9775E', '🛍️', '清單'), bought: false });
+                saveStore(); renderShopping(); switchTab('shopping');
             }
-            document.getElementById('ai-input').value = '';
-            toggleAIModal();
+            document.getElementById('ai-input').value = ''; toggleAIModal();
         }
 
-        // 啟動渲染
         renderAll();
     </script>
 </body>
