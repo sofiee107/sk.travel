@@ -9,6 +9,9 @@
     <title>旅の手帳｜即時協作旅遊規劃</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Leaflet 互動地圖引擎 (Funliday 多點路線模式) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Firebase Realtime Database SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -16,6 +19,20 @@
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #FDFBF7; color: #3D3A36; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .funliday-pin {
+            background: #E8927C;
+            color: #fff;
+            border: 2.5px solid #fff;
+            border-radius: 9999px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+        }
         @media print {
             body { background: white !important; }
             header, nav, button, .no-print, #ai-fab { display: none !important; }
@@ -43,7 +60,7 @@
                     <button onclick="openCloudModal()" id="cloud-status-btn" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition">
                         🟡 設定雲端同步
                     </button>
-                    <button onclick="exportTripPDF()" class="bg-[#3D3A36] text-white text-[10px] font-bold px-2 py-1.5 rounded-lg active:scale-95 transition">
+                    <button onclick="exportTripPDF()" class="bg-[#3D3A36] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition">
                         📄 PDF
                     </button>
                 </div>
@@ -63,7 +80,7 @@
         <!-- 主要內容區 -->
         <main class="flex-1 p-4 space-y-4">
 
-            <!-- 分頁 1：每日行程（Funliday 視覺化時間軸 + 交通估算 + 留言討論 + 地圖） -->
+            <!-- 分頁 1：每日行程（Funliday 時間軸 + 多點連線地圖） -->
             <section id="tab-itinerary" class="tab-content space-y-3.5">
                 <div class="flex justify-between items-center gap-2">
                     <div class="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1 flex-1" id="day-tabs"></div>
@@ -91,14 +108,15 @@
                 <!-- Funliday 視覺化時間軸列表 -->
                 <div id="itinerary-list" class="space-y-2"></div>
 
-                <!-- 地圖模式 -->
+                <!-- Funliday 多點路線互動地圖模式 -->
                 <div id="itinerary-map-view" class="hidden space-y-3">
                     <div class="bg-white rounded-2xl p-3 border border-[#EFECE6] shadow-sm space-y-2">
                         <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-[#3D3A36]" id="map-title-label">📍 當日動線地圖</span>
-                            <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded" id="map-engine-badge">智慧導航</span>
+                            <span class="text-xs font-bold text-[#3D3A36]" id="map-title-label">📍 Funliday 當日動線總覽</span>
+                            <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded" id="map-engine-badge">韓國直達 Naver 韓文地址</span>
                         </div>
-                        <div id="map-iframe-container" class="w-full h-72 rounded-xl overflow-hidden border border-[#EFECE6] bg-[#F8F4EC] flex items-center justify-center"></div>
+                        <div id="funliday-leaflet-map" class="w-full h-80 rounded-xl overflow-hidden border border-[#EFECE6] bg-[#F8F4EC] z-10"></div>
+                        <p class="text-[10px] text-gray-400 text-center">💡 地圖上已標出 1 → 2 → 3 動線順序，點擊大頭針或下方卡片即可開啟精準韓文地址導航。</p>
                     </div>
                     <div id="itinerary-map-list" class="space-y-2"></div>
                 </div>
@@ -112,7 +130,7 @@
                         ➕ 新增商品
                     </button>
                 </div>
-                <p class="text-[10px] text-gray-400">✨ 輸入大概名稱（如「痘痘貼」「香蕉牛奶」）即自動識別全名與圖片；也可點「📷 上傳圖片」自訂照片。</p>
+                <p class="text-[10px] text-gray-400">✨ 輸入簡稱（如「痘痘貼」「香蕉牛奶」「護手霜」「面膜」）即自動識別完整韓文/品牌全名、建議店鋪與功效備註；也可點「📷 上傳圖片」自訂照片。</p>
                 <div class="flex gap-1.5 overflow-x-auto hide-scrollbar" id="shop-filters"></div>
                 <div id="shopping-list" class="space-y-3"></div>
                 <input type="file" id="quick-img-upload" accept="image/*" class="hidden" onchange="handleQuickImageUpload(event)">
@@ -192,7 +210,10 @@
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">🏨 住宿與鄰近交通</h3>
-                        <button onclick="openHotelModal()" class="text-[11px] text-[#E8927C] font-bold">✏️ 編輯</button>
+                        <div class="flex items-center gap-2">
+                            <a id="hotel-direct-nav-btn" href="#" target="_blank" class="bg-[#03C75A] text-white text-[10px] font-bold px-2 py-1 rounded-lg">🧭 導航去酒店</a>
+                            <button onclick="openHotelModal()" class="text-[11px] text-[#E8927C] font-bold">✏️ 編輯</button>
+                        </div>
                     </div>
                     <div id="hotel-card-container" class="space-y-2 text-xs"></div>
                 </div>
@@ -241,18 +262,18 @@
 
         <!-- 懸浮 AI 行程規劃小幫手 -->
         <button id="ai-fab" onclick="toggleAIModal()" class="fixed bottom-20 right-4 bg-[#3D3A36] text-white px-4 py-2.5 rounded-full shadow-lg text-xs font-bold flex items-center gap-1.5 z-40 active:scale-95 transition">
-            <span>✨</span> AI 規劃助手
+            <span>✨</span> AI 智慧規劃
         </button>
 
         <!-- ☁️ 雲端即時同步設定 Modal -->
         <div id="cloud-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
             <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3.5 shadow-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center border-b border-[#EFECE6] pb-3">
-                    <h3 class="text-base font-bold text-[#3D3A36]">☁️ 像 Google Sheets 一樣的即時多人同步</h3>
+                    <h3 class="text-base font-bold text-[#3D3A36]">☁️ 雲端即時多人同步</h3>
                     <button onclick="closeCloudModal()" class="text-gray-400 text-lg font-bold">✕</button>
                 </div>
                 <p class="text-[11px] text-gray-600 leading-relaxed bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6]">
-                    填入你的免費 <strong>Firebase Realtime Database 網址</strong> 與<strong>房間代號</strong>，你與同行人只要在各自手機填入相同設定，<strong>任何編輯都會在 1 秒內自動即時出現在對方螢幕上</strong>，完全不用複製貼上！
+                    填入免費的 <strong>Firebase Realtime Database 網址</strong> 與<strong>房間代號</strong>，兩支手機填入相同設定後，任何編輯都會在 1 秒內自動即時出現在對方螢幕上。
                 </p>
                 <div class="space-y-2.5">
                     <div>
@@ -260,7 +281,7 @@
                         <input type="text" id="cloud-db-url" placeholder="https://你的專案-default-rtdb.asia-southeast1.firebasedatabase.app" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-mono">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-gray-500 block mb-1">同行房間代號（自訂英文或數字，兩人填一樣即可）</label>
+                        <label class="text-[10px] font-bold text-gray-500 block mb-1">同行房間代號（兩人填一樣即可）</label>
                         <input type="text" id="cloud-room-id" placeholder="例如：seoul_sisters_2026" value="seoul_sisters_2026" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-mono font-bold">
                     </div>
                 </div>
@@ -277,6 +298,10 @@
                 <div class="flex justify-between items-center border-b border-[#EFECE6] pb-3">
                     <h3 id="itin-modal-title" class="text-base font-bold text-[#3D3A36]">📅 新增行程景點</h3>
                     <button onclick="closeItineraryModal()" class="text-gray-400 text-lg font-bold">✕</button>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="itin-title" placeholder="輸入景點名稱（如：愛寶樂園、景福宮、廣藏市場）" class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-bold">
+                    <button type="button" onclick="autoFillItineraryFields()" class="bg-[#EBF4FA] text-[#3A5A78] px-3 py-2 rounded-xl text-[11px] font-bold shrink-0">✨ 智慧補全</button>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
                     <div>
@@ -297,10 +322,16 @@
                         </select>
                     </div>
                 </div>
-                <input type="text" id="itin-title" placeholder="行程名稱（如：聖水洞咖啡廳巡禮）" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-bold">
-                <input type="text" id="itin-location" placeholder="地圖搜尋地標（韓文/英文更準確）" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                <div>
+                    <label class="text-[10px] text-gray-400 block mb-1">Naver Map 直達韓文名稱／地址（韓國導航用）</label>
+                    <input type="text" id="itin-naver-query" placeholder="如：에버랜드 或 경기 용인시 처인구 포곡읍 에버랜드로 199" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 block mb-1">顯示地址／區域</label>
+                    <input type="text" id="itin-location" placeholder="如：京畿道龍仁市處仁區蒲谷邑愛寶樂園路 199" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                </div>
                 <input type="text" id="itin-transit" placeholder="前往下一站交通估算（如：🚇 地鐵2號線 約 20 分鐘）" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                <textarea id="itin-note" rows="2" placeholder="行程下方備註（預約資訊、必吃推薦、注意事項...）" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs"></textarea>
+                <textarea id="itin-note" rows="3" placeholder="交通方式 / 推薦項目 / 實用小提示..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs"></textarea>
                 <button onclick="saveItineraryItem()" class="w-full bg-[#E8927C] text-white font-bold text-xs py-3 rounded-xl shadow-sm">💾 儲存並即時同步</button>
             </div>
         </div>
@@ -324,7 +355,7 @@
                 </div>
                 <div class="space-y-2.5">
                     <div class="flex gap-2">
-                        <input type="text" id="new-shop-name" placeholder="輸入大概名字（如：痘痘貼、香蕉牛奶）" class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2.5 text-xs font-bold">
+                        <input type="text" id="new-shop-name" placeholder="輸入大概名字（如：痘痘貼、香蕉牛奶、面膜）" class="flex-1 bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2.5 text-xs font-bold">
                         <button type="button" onclick="applySmartProductRecognition()" class="bg-[#EBF4FA] text-[#3A5A78] px-3 py-2 rounded-xl text-[11px] font-bold shrink-0">✨ 自動辨識</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -373,6 +404,7 @@
                     <button onclick="closeHotelModal()" class="text-gray-400 text-lg font-bold">✕</button>
                 </div>
                 <input type="text" id="h-name" placeholder="酒店名稱" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-bold">
+                <input type="text" id="h-naver-query" placeholder="Naver Map 直達韓文名稱/地址（如：위코스테이명동）" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
                 <input type="text" id="h-address" placeholder="詳細地址" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
                 <div class="grid grid-cols-3 gap-2">
                     <input type="text" id="h-phone" placeholder="住宿電話" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs">
@@ -442,16 +474,17 @@
             </div>
         </div>
 
-        <!-- AI 行程規劃小幫手彈窗 -->
+        <!-- AI 智慧行程規劃彈窗 -->
         <div id="ai-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-end justify-center">
             <div class="bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3 shadow-2xl">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-[#3D3A36]">✨ AI 行程與購物小幫手</h3>
+                    <h3 class="text-sm font-bold text-[#3D3A36]">✨ AI 智慧行程與購物擴寫</h3>
                     <button onclick="toggleAIModal()" class="text-gray-400 text-lg font-bold">✕</button>
                 </div>
-                <textarea id="ai-input" rows="3" placeholder="輸入景點（例如：「景福宮穿韓服」）或購物大概名稱（例如：「痘痘貼」）..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs"></textarea>
+                <p class="text-[11px] text-gray-500">輸入地點（如「愛寶樂園」「景福宮」「廣藏市場」「弘大」「南山塔」）或商品簡稱（如「痘痘貼」「香蕉牛奶」），系統會自動填入交通、推薦攻略與韓文直達地址！</p>
+                <textarea id="ai-input" rows="2" placeholder="輸入景點名稱或商品名稱..." class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl p-3 text-xs"></textarea>
                 <div class="flex gap-2">
-                    <button onclick="processAIInput('itinerary')" class="flex-1 bg-[#E8927C] text-white py-2.5 rounded-xl text-xs font-bold">➕ 加入當天時間軸</button>
+                    <button onclick="processAIInput('itinerary')" class="flex-1 bg-[#E8927C] text-white py-2.5 rounded-xl text-xs font-bold">✨ 智慧生成時間軸行程</button>
                     <button onclick="processAIInput('shopping')" class="flex-1 bg-[#7FB093] text-white py-2.5 rounded-xl text-xs font-bold">🛍️ 智慧識別加入購物</button>
                 </div>
             </div>
@@ -484,13 +517,148 @@
             USD: { symbol: '$', name: '美元', defaultRate: 7.78 }
         };
 
+        // 韓國熱門景點智慧知識庫（自動補全韓文直達地址、座標、交通方式、推薦項目、小提示）
+        const PLACE_KNOWLEDGE = [
+            {
+                keys: ['愛寶樂園', 'everland', '에버랜드'],
+                title: '愛寶樂園 Everland 一日遊',
+                type: '景點',
+                duration: '480分鐘',
+                naverQuery: '에버랜드',
+                location: '京畿道龍仁市處仁區蒲谷邑愛寶樂園路 199 (에버랜드)',
+                lat: 37.2939, lng: 127.2025,
+                transit: '🚌 搭乘 5002 號紅線直達巴士（新論峴/江南站出發約 50 分鐘）或龍仁輕電鐵轉免費接駁車',
+                note: '【交通】明洞出發可搭地鐵至江南站/新論峴站轉 5002 號巴士，或預約 Klook/KKday 往返專車直達。\n【推薦項目】T-Express 木質過山車、熊貓世界（看福寶家族）、遺失的峽谷水陸兩棲車、夜間煙火秀。\n【小提示】山區氣溫比首爾市區低 3~5°C，務必貼滿暖暖包；入園後立刻用 Everland App 抽 Smart Queue 預約熱門設施。'
+            },
+            {
+                keys: ['景福宮', '경복궁', '韓服'],
+                title: '景福宮 ＆ 韓服體驗巡禮',
+                type: '景點',
+                duration: '150分鐘',
+                naverQuery: '경복궁',
+                location: '首爾特別市鍾路區社稷路 161 (경복궁)',
+                lat: 37.5796, lng: 126.9770,
+                transit: '🚇 地鐵 3 號線「景福宮站」5 號出口步行約 3 分鐘',
+                note: '【交通】地鐵 3 號線景福宮站 5 號出口直達光化門廣場。\n【推薦項目】10:00 / 14:00 守門將換崗儀式、勤政殿、慶會樓倒影、周邊西花/宮女狐韓服租借。\n【小提示】穿著韓服可免費入場；週二為景福宮公休日，排行程時務必避開星期二！'
+            },
+            {
+                keys: ['廣藏市場', '광장시장', '生牛肉', '綠豆煎餅'],
+                title: '廣藏市場地道小吃巡禮',
+                type: '餐廳',
+                duration: '90分鐘',
+                naverQuery: '광장시장',
+                location: '首爾特別市鍾路區昌慶宮路 88 (광장시장)',
+                lat: 37.5700, lng: 126.9996,
+                transit: '🚇 地鐵 1 號線「鍾路5街站」8 號出口步行 1 分鐘（距離忠武路站僅 2 站）',
+                note: '【交通】地鐵 1 號線鍾路5街站 8 號出口即達市場入口。\n【推薦項目】富村生牛肉（米其林推薦）、順熙家綠豆煎餅、麻藥紫菜飯捲、糯米麻花捲。\n【小提示】市場攤位多只收韓幣現金或韓國本地轉帳，請備妥足夠韓幣紙鈔。'
+            },
+            {
+                keys: ['聖水洞', '성수동', '聖水'],
+                title: '聖水洞潮流街區 ＆ 咖啡廳巡禮',
+                type: '景點',
+                duration: '240分鐘',
+                naverQuery: '성수동 카페거리',
+                location: '首爾特別市城東區聖水洞2街 (성수동 카페거리)',
+                lat: 37.5445, lng: 127.0559,
+                transit: '🚇 地鐵 2 號線「聖水站」3 號或 4 號出口步行即達',
+                note: '【交通】地鐵 2 號線聖水站 3/4 號出口出站即進入主街區。\n【推薦項目】Tamburins 旗艦店、Dior 聖水概念店、大林倉庫咖啡、祖傳三代馬鈴薯排骨湯、自然島鹽麵包。\n【小提示】週末下午人潮極多，建議 11:30 前先吃排骨湯或領鹽麵包出爐號碼牌。'
+            },
+            {
+                keys: ['明洞', '명동'],
+                title: '明洞商圈購物 ＆ 換錢美食',
+                type: '購物',
+                duration: '180分鐘',
+                naverQuery: '명동거리',
+                location: '首爾特別市中區明洞街 (명동거리)',
+                lat: 37.5636, lng: 126.9834,
+                transit: '🚇 地鐵 4 號線「明洞站」6 號出口（由忠武路 WECO STAY 步行約 10 分鐘）',
+                note: '【交通】地鐵 4 號線明洞站 6 號出口即達主街。\n【推薦項目】大使館前換錢所、Olive Young 明洞旗艦店、神仙雪濃湯、明洞餃子、BHC 炸雞。\n【小提示】護照請隨身攜帶，Olive Young 等退稅店鋪可現場直接扣稅。'
+            },
+            {
+                keys: ['弘大', '홍대', '延南洞'],
+                title: '弘大商圈 ＆ 延南洞文青散步',
+                type: '購物',
+                duration: '240分鐘',
+                naverQuery: '홍대입구역',
+                location: '首爾特別市麻浦區楊花路 160 (홍대입구역)',
+                lat: 37.5575, lng: 126.9245,
+                transit: '🚇 地鐵 2 號線 / 機場快線「弘大入口站」9 號出口（逛街）或 3 號出口（延南洞）',
+                note: '【交通】地鐵 2 號線弘大入口站 9 號出口直達主商圈。\n【推薦項目】Object 文創選物、Gentle Monster、延南洞手作咖啡廳、弘大烤肉街與街頭表演。\n【小提示】傍晚 18:00 後街頭表演最熱鬧，延南洞小店多在 12:00 後才陸續開門。'
+            },
+            {
+                keys: ['南山塔', '首爾塔', 'n首爾塔', '남산서울타워'],
+                title: 'N 首爾塔夜景 ＆ 南山纜車',
+                type: '景點',
+                duration: '120分鐘',
+                naverQuery: '남산서울타워',
+                location: '首爾特別市龍山區南山公園街 105 (남산서울타워)',
+                lat: 37.5512, lng: 126.9882,
+                transit: '🚌 忠武路站 2 號出口搭乘 01A / 01B 號南山循環巴士直達山頂（就近酒店出發最方便！）',
+                note: '【交通】從明洞 WECO STAY 步行至忠武路站 2 號出口，搭 01A 循環巴士即可直達，免排纜車長隊。\n【推薦項目】愛情鎖牆、觀景台 360 度首爾夜景。\n【小提示】傍晚日落前 30 分鐘抵達可同時拍到黃昏與夜景，山頂風大請戴帽子與圍巾。'
+            },
+            {
+                keys: ['東大門', '동대문', 'ddp'],
+                title: '東大門設計廣場 DDP ＆ 批發夜市',
+                type: '購物',
+                duration: '150分鐘',
+                naverQuery: '동대문디자인플라자',
+                location: '首爾特別市中區乙支路 281 (동대문디자인플라자)',
+                lat: 37.5665, lng: 127.0092,
+                transit: '🚇 地鐵 4 號線「東大門歷史文化公園站」1 號出口（距離忠武路僅 1 站）',
+                note: '【交通】地鐵 4 號線東大門歷史文化公園站 1 號出口直達 DDP。\n【推薦項目】DDP 建築夜景、nyu nyu 飾品批發、apM PLACE、陳玉華一隻雞。\n【小提示】nyu nyu 營業至凌晨，批發大樓週六晚間多數公休。'
+            },
+            {
+                keys: ['weco', '明洞weco', '酒店', '飯店'],
+                title: '明洞 WECO STAY 酒店 (入住/寄放行李)',
+                type: '交通',
+                duration: '45分鐘',
+                naverQuery: '위코스테이명동',
+                location: '首爾特別市中區昌慶宮路1街14 (위코스테이명동)',
+                lat: 37.5612, lng: 126.9942,
+                transit: '🚇 地鐵 4 號線「忠武路站」8 號出口步行 4 分鐘 / 機場巴士 6001 號忠武路站下車',
+                note: '【交通】仁川機場 T2 搭機場巴士 6001 號至忠武路站下車步行約 4 分鐘。\n【小提示】採自助式密碼入住，入住前請留意電郵或預訂訊息發送的房號與大門密碼。'
+            }
+        ];
+
+        function smartExpandItinerary(rawInput) {
+            const clean = (rawInput || '').trim();
+            const lower = clean.toLowerCase();
+            for (const item of PLACE_KNOWLEDGE) {
+                if (item.keys.some(k => lower.includes(k.toLowerCase()))) {
+                    return {
+                        title: clean.length > item.title.length ? clean : item.title,
+                        type: item.type,
+                        duration: item.duration,
+                        naverQuery: item.naverQuery,
+                        location: item.location,
+                        lat: item.lat,
+                        lng: item.lng,
+                        transit: item.transit,
+                        note: item.note
+                    };
+                }
+            }
+            return {
+                title: clean,
+                type: '景點',
+                duration: '90分鐘',
+                naverQuery: clean,
+                location: clean,
+                lat: 37.5636 + (Math.random() - 0.5) * 0.02,
+                lng: 126.9850 + (Math.random() - 0.5) * 0.02,
+                transit: '🚇 建議使用 Naver Map 查詢地鐵與公車轉乘路線',
+                note: `【交通】點擊右上角 Naver 導航查看即時路線。\n【推薦項目】可於出發前補充必吃美食或拍照打卡點。\n【小提示】留意店家營業時間與公休日。`
+            };
+        }
+
+        // 購物清單智慧識別庫
         const PRODUCT_RULES = [
-            { keys: ['痘痘貼', '暗瘡貼', 'olive young'], fullName: 'Olive Young Care Plus 舒緩痘痘貼', store: 'Olive Young', emoji: '🩹', bg: '#E6F4EA', fg: '#1E6B3B', desc: '超薄隱形貼合肌膚，適合妝前使用。' },
-            { keys: ['香蕉牛奶', 'binggrae', '牛奶'], fullName: 'Binggrae 香蕉調味乳 (바나나맛우유)', store: '便利店 / 樂天超市', emoji: '🍌', bg: '#FEF3C7', fg: '#B45309', desc: '韓國經典香蕉牛奶，冷藏飲用風味佳。' },
-            { keys: ['潤唇膏', '護唇', '唇膏', 'vaseline'], fullName: 'Vaseline 凡士林保濕潤唇膏', store: 'Daiso / Olive Young', emoji: '💄', bg: '#FCE8E6', fg: '#B84A39', desc: '冬季嘴唇乾裂必備，高滋潤度。' },
-            { keys: ['面膜', 'torriden', '保濕'], fullName: 'Torriden DIVE-IN 5D 玻尿酸保濕面膜', store: 'Olive Young', emoji: '🧴', bg: '#E3F2FD', fg: '#2B6CB0', desc: '深層補水鎮靜，精華液充足。' },
-            { keys: ['杏仁', 'hbaf', '堅果', '零食'], fullName: 'HBAF 蜂蜜奶油風味烤杏仁果', store: '樂天超市', emoji: '🥜', bg: '#FEF9C3', fg: '#92400E', desc: '香甜濃郁伴手禮零食。' },
-            { keys: ['護手霜', 'tamburins', '手霜'], fullName: 'Tamburins 貝殼香氛護手霜', store: '聖水洞 / 旗艦店', emoji: '✋', bg: '#F3E8FF', fg: '#6B21A8', desc: '質感香氛護手霜，清爽不黏膩。' }
+            { keys: ['痘痘貼', '暗瘡貼', 'olive young'], fullName: 'Olive Young Care Plus 舒緩痘痘貼 (102片增量裝)', store: 'Olive Young', emoji: '🩹', bg: '#E6F4EA', fg: '#1E6B3B', desc: '【推薦理由】韓國國民銷量冠軍，0.1mm 超薄隱形防水，妝前貼合不易翹邊。' },
+            { keys: ['香蕉牛奶', 'binggrae', '牛奶'], fullName: 'Binggrae 經典香蕉調味乳 (바나나맛우유)', store: '便利店 / 樂天超市', emoji: '🍌', bg: '#FEF3C7', fg: '#B45309', desc: '【推薦理由】韓國必喝胖胖瓶香蕉牛奶，另有草莓、哈密瓜口味，超商常見 2+1 優惠。' },
+            { keys: ['潤唇膏', '護唇', '唇膏', 'vaseline'], fullName: 'Vaseline 凡士林保濕潤唇膏 / Rom&nd 果凍唇釉', store: 'Daiso / Olive Young', emoji: '💄', bg: '#FCE8E6', fg: '#B84A39', desc: '【推薦理由】首爾冬季極乾燥必備潤唇膏；Olive Young 可試色 Rom&nd 果汁唇釉。' },
+            { keys: ['面膜', 'torriden', '保濕'], fullName: 'Torriden DIVE-IN 5D 微分子玻尿酸保濕面膜', store: 'Olive Young', emoji: '🧴', bg: '#E3F2FD', fg: '#2B6CB0', desc: '【推薦理由】韓國化解 App 排行榜常勝軍，純素纖維面膜紙服貼、深層補水不黏膩。' },
+            { keys: ['杏仁', 'hbaf', '堅果', '零食'], fullName: 'HBAF 蜂蜜奶油 / 芥末風味烤杏仁果', store: '樂天超市 / 明洞專賣店', emoji: '🥜', bg: '#FEF9C3', fg: '#92400E', desc: '【推薦理由】伴手禮首選，推薦蜂蜜奶油、烤玉米、提拉米蘇口味，可現場退稅。' },
+            { keys: ['護手霜', 'tamburins', '手霜'], fullName: 'Tamburins 貝殼香氛護手霜 (CHAMO / FEY9)', store: '聖水洞 / 漢南洞旗艦店', emoji: '✋', bg: '#F3E8FF', fg: '#6B21A8', desc: '【推薦理由】Jennie 同款熱賣香氣 CHAMO（洋甘菊木質調），送禮自用質感極佳。' }
         ];
 
         function recognizeProductName(rawName) {
@@ -499,7 +667,7 @@
             for (const rule of PRODUCT_RULES) {
                 if (rule.keys.some(k => lower.includes(k.toLowerCase()))) {
                     return {
-                        name: clean.length >= 6 ? clean : rule.fullName,
+                        name: clean.length >= 8 ? clean : rule.fullName,
                         store: rule.store,
                         desc: rule.desc,
                         image: makeSvgCard(rule.bg, rule.fg, rule.emoji, clean.slice(0, 6) || rule.store.slice(0, 6))
@@ -509,7 +677,7 @@
             return {
                 name: clean,
                 store: '必買清單',
-                desc: `已識別關鍵字「${clean}」，可補充規格或點「📷 上傳圖片」加入照片。`,
+                desc: `【購物筆記】已建立「${clean}」，可點右上角「🔍 搜圖」對照包裝，或點「📷 上傳圖片」加入實拍照片。`,
                 image: makeSvgCard('#FDF2EE', '#D9775E', '🛍️', clean.slice(0, 6) || '商品')
             };
         }
@@ -531,23 +699,59 @@
                 { day: 1, label: 'Day 1 (11/29) 忠武路・明洞', weather: '首爾・明洞 0°C ~ 8°C', tip: 'KE2012 抵達首爾・注意保暖' },
                 { day: 2, label: 'Day 2 (11/30) 聖水洞', weather: '首爾・聖水洞 -1°C ~ 7°C', tip: '街拍與咖啡廳巡禮' },
                 { day: 3, label: 'Day 3 (12/1) 愛寶樂園', weather: '京畿道龍仁 -3°C ~ 5°C', tip: '山區較冷・建議帶暖暖包' },
-                { day: 4, label: 'Day 4–8 (12/2–6) 待規劃', weather: '首爾 12月初冬季 -2°C ~ 6°C', tip: '隨時新增、調整順序或留言討論' }
+                { day: 4, label: 'Day 4–8 (12/2–6) 待規劃', weather: '首爾 12月初冬季 -2°C ~ 6°C', tip: '使用右下角 ✨ AI 智慧規劃自動填入攻略' }
             ],
             itinerary: [
-                { id: 101, day: 1, type: '交通', time: '07:30', duration: '45分鐘', title: '仁川機場 → 明洞 WECO STAY 酒店寄放行李', location: '위코스테이명동', transit: '🚇 地鐵4號線「忠武路站→明洞站」約 10 分鐘', note: '先至酒店櫃檯辦理行李寄放。', comments: [{ author: '姊姊', text: '記得先在機場換一點韓幣搭車！' }] },
-                { id: 102, day: 1, type: '餐廳', time: '11:30', duration: '90分鐘', title: '明洞周邊午餐 ＆ 換錢所', location: '명동', transit: '🚶 步行逛明洞商圈 約 5 分鐘', note: '順便確認退稅與換匯匯率。', comments: [] },
-                { id: 103, day: 2, type: '景點', time: '11:00', duration: '240分鐘', title: '聖水洞潮流街區與咖啡廳巡禮', location: '성수동', transit: '🚇 地鐵2號線移動 約 25 分鐘', note: '可安排香氛店與午餐。', comments: [] },
-                { id: 104, day: 3, type: '景點', time: '09:30', duration: '480分鐘', title: '愛寶樂園 Everland 一日遊', location: '에버랜드', transit: '🚌 轉乘接駁巴士 約 60 分鐘', note: '建議提前下載園區 App 查看排隊時間。', comments: [] }
+                {
+                    id: 101, day: 1, type: '交通', time: '07:30', duration: '45分鐘',
+                    title: '仁川機場 → 明洞 WECO STAY 酒店寄放行李',
+                    naverQuery: '위코스테이명동',
+                    location: '首爾特別市中區昌慶宮路1街14 (위코스테이명동)',
+                    lat: 37.5612, lng: 126.9942,
+                    transit: '🚇 地鐵4號線「忠武路站→明洞站」約 10 分鐘',
+                    note: '【交通】仁川機場 T2 搭機場巴士 6001 號至忠武路站下車步行 4 分鐘。\n【小提示】先至酒店寄放行李，確認大門與房號密碼。',
+                    comments: [{ author: '姊姊', text: '記得先在機場換一點韓幣搭車！' }]
+                },
+                {
+                    id: 102, day: 1, type: '餐廳', time: '11:30', duration: '120分鐘',
+                    title: '明洞商圈購物 ＆ 換錢美食',
+                    naverQuery: '명동거리',
+                    location: '首爾特別市中區明洞街 (명동거리)',
+                    lat: 37.5636, lng: 126.9834,
+                    transit: '🚌 忠武路站 2 號出口搭 01A 巴士往南山塔 約 15 分鐘',
+                    note: '【推薦項目】大使館前換錢所、Olive Young 明洞旗艦店、神仙雪濃湯。\n【小提示】隨身攜帶護照辦理現場退稅。',
+                    comments: []
+                },
+                {
+                    id: 103, day: 2, type: '景點', time: '11:00', duration: '240分鐘',
+                    title: '聖水洞潮流街區 ＆ 咖啡廳巡禮',
+                    naverQuery: '성수동 카페거리',
+                    location: '首爾特別市城東區聖水洞2街 (성수동 카페거리)',
+                    lat: 37.5445, lng: 127.0559,
+                    transit: '🚇 地鐵2號線移動 約 25 分鐘',
+                    note: '【交通】地鐵 2 號線聖水站 3/4 號出口即達。\n【推薦項目】Tamburins 旗艦店、Dior 聖水概念店、祖傳三代馬鈴薯排骨湯。',
+                    comments: []
+                },
+                {
+                    id: 104, day: 3, type: '景點', time: '09:30', duration: '480分鐘',
+                    title: '愛寶樂園 Everland 一日遊',
+                    naverQuery: '에버랜드',
+                    location: '京畿道龍仁市處仁區蒲谷邑愛寶樂園路 199 (에버랜드)',
+                    lat: 37.2939, lng: 127.2025,
+                    transit: '🚌 搭乘 5002 號直達巴士返回市區 約 55 分鐘',
+                    note: '【交通】江南站/新論峴站搭 5002 號紅線巴士直達。\n【推薦項目】T-Express 木質過山車、熊貓世界、夜間煙火秀。\n【小提示】山區氣溫低，務必貼暖暖包並用 Everland App 抽預約券。',
+                    comments: []
+                }
             ],
             shopping: [
-                { id: 1, name: 'Olive Young Care Plus 舒緩痘痘貼', store: 'Olive Young', price: 5000, desc: '超薄隱形款式，妝前貼合度佳。', image: makeSvgCard('#E6F4EA', '#1E6B3B', '🩹', '痘痘貼'), bought: false },
-                { id: 2, name: 'Binggrae 香蕉調味乳', store: '便利店 / 樂天超市', price: 3200, desc: '冷藏飲用風味佳。', image: makeSvgCard('#FEF3C7', '#B45309', '🍌', '香蕉牛奶'), bought: false }
+                { id: 1, name: 'Olive Young Care Plus 舒緩痘痘貼 (102片增量裝)', store: 'Olive Young', price: 5000, desc: '【推薦理由】超薄隱形防水，妝前貼合不易翹邊。', image: makeSvgCard('#E6F4EA', '#1E6B3B', '🩹', '痘痘貼'), bought: false },
+                { id: 2, name: 'Binggrae 經典香蕉調味乳 (바나나맛우유)', store: '便利店 / 樂天超市', price: 3200, desc: '【推薦理由】韓國必喝胖胖瓶香蕉牛奶，冷藏飲用風味最佳。', image: makeSvgCard('#FEF3C7', '#B45309', '🍌', '香蕉牛奶'), bought: false }
             ],
             expenses: [],
             luggage: [
                 { id: 1, cat: '證件錢財', name: '特區護照 ＋ PNR 54WOPR 機票憑證', checked: false },
                 { id: 2, cat: '證件錢財', name: '網卡 / eSIM ＋ 現金 / 信用卡', checked: false },
-                { id: 3, cat: '保暖衣物', name: '厚外套 / 保暖衣物', checked: false },
+                { id: 3, cat: '保暖衣物', name: '厚外套 / 保暖衣物 / 暖暖包', checked: false },
                 { id: 4, cat: '3C電子', name: '220V 雙圓孔轉接頭 ＋ 行動電源', checked: false }
             ],
             flight: {
@@ -557,6 +761,7 @@
             },
             hotel: {
                 name: '明洞 WECO STAY 酒店 (WECO STAY Myeongdong)',
+                naverQuery: '위코스테이명동',
                 address: '首爾特別市中區昌慶宮路1街14 (14, Changgyeonggung-ro 1-gil, Jung-gu, Seoul)',
                 phone: '+82 70-4138-3466 / 010-7540-9737',
                 bookingNo: '請於編輯填入訂單號',
@@ -566,7 +771,7 @@
             }
         };
 
-        const STORAGE_KEY = 'travel_notebook_funliday_v3';
+        const STORAGE_KEY = 'travel_notebook_funliday_v4';
         const CLOUD_CFG_KEY = 'travel_notebook_firebase_cfg';
 
         let store = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
@@ -587,7 +792,8 @@
         let targetQuickUploadShopId = null;
         let editingExpenseId = null;
 
-        // Firebase 即時資料庫變數
+        let leafletMap = null;
+        let leafletLayerGroup = null;
         let firebaseDbRef = null;
         let isApplyingRemote = false;
 
@@ -624,16 +830,11 @@
 
         function bindFirebaseRoom(dbUrl, roomId, pushLocalFirst) {
             try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp({ databaseURL: dbUrl });
-                }
+                if (!firebase.apps.length) firebase.initializeApp({ databaseURL: dbUrl });
                 const db = firebase.database();
                 if (firebaseDbRef) firebaseDbRef.off();
                 firebaseDbRef = db.ref('rooms/' + roomId.replace(/[.#$\[\]]/g, '_'));
-
-                if (pushLocalFirst) {
-                    firebaseDbRef.set(store);
-                }
+                if (pushLocalFirst) firebaseDbRef.set(store);
 
                 firebaseDbRef.on('value', (snapshot) => {
                     const remoteData = snapshot.val();
@@ -657,7 +858,6 @@
 
         function openCloudModal() { document.getElementById('cloud-modal').classList.remove('hidden'); }
         function closeCloudModal() { document.getElementById('cloud-modal').classList.add('hidden'); }
-
         function connectCloudSync(pushLocalFirst) {
             const dbUrl = document.getElementById('cloud-db-url').value.trim();
             const roomId = document.getElementById('cloud-room-id').value.trim();
@@ -672,9 +872,18 @@
             return trip.currency === 'KRW' || /韓國|首爾|釜山|濟州|korea|seoul/i.test(trip.title || '');
         }
 
-        function getMapUrl(locationName) {
-            const q = encodeURIComponent(locationName || '');
-            return isKoreaTrip() ? `https://map.naver.com/v5/search/${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
+        // 精準 Naver Map 韓文地址直達連結
+        function getNaverDirectUrl(itemOrQuery) {
+            if (!isKoreaTrip()) {
+                const q = typeof itemOrQuery === 'string' ? itemOrQuery : (itemOrQuery.location || itemOrQuery.title || '');
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+            }
+            if (typeof itemOrQuery === 'string') {
+                return `https://map.naver.com/p/search/${encodeURIComponent(itemOrQuery)}`;
+            }
+            // 優先使用韓文標準地標 naverQuery，避免繁簡中文造成 Naver 辨識失敗
+            const koreanTarget = (itemOrQuery.naverQuery || '').trim() || smartExpandItinerary(itemOrQuery.title).naverQuery || itemOrQuery.location || itemOrQuery.title;
+            return `https://map.naver.com/p/search/${encodeURIComponent(koreanTarget)}`;
         }
 
         function compressImageFile(file, callback) {
@@ -741,6 +950,9 @@
             const activeBtn = document.getElementById('nav-' + tabName);
             activeBtn.classList.remove('text-gray-400', 'font-medium');
             activeBtn.classList.add('text-[#E8927C]', 'font-bold');
+            if (tabName === 'itinerary' && itineraryViewMode === 'map') {
+                setTimeout(renderMapMode, 80);
+            }
         }
 
         // --- Funliday 時間軸行程渲染 ---
@@ -766,7 +978,7 @@
             const nextNum = trip.days.length + 1;
             const label = prompt('請輸入新天數名稱：', `Day ${nextNum}`);
             if (!label) return;
-            trip.days.push({ day: nextNum, label: label.trim(), weather: `${trip.title} ・ 天氣資訊`, tip: '點擊右上角 + 景點新增時間軸' });
+            trip.days.push({ day: nextNum, label: label.trim(), weather: `${trip.title} ・ 天氣資訊`, tip: '點擊右上角 + 景點或 ✨ AI 智慧規劃' });
             currentDay = nextNum;
             saveStore();
             renderDayTabs();
@@ -788,22 +1000,21 @@
                 btnMap.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs';
                 btnList.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500';
                 mapEl.classList.remove('hidden'); listEl.classList.add('hidden');
-                renderMapMode();
+                setTimeout(renderMapMode, 60);
             }
         }
 
         function renderItinerary() {
             const trip = getActiveTrip();
             const dayItems = trip.itinerary.filter(i => i.day === currentDay);
-            const navLabel = isKoreaTrip() ? 'Naver 導航' : 'Google 導航';
+            const navLabel = isKoreaTrip() ? 'Naver 直達' : 'Google 導航';
 
             document.getElementById('itinerary-list').innerHTML = dayItems.length === 0 ?
-                `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">這一天尚無行程，點上方「+ 景點」開始建立時間軸！</div>` :
+                `<div class="bg-white rounded-2xl p-6 border border-[#EFECE6] text-center text-xs text-gray-400">這一天尚無行程，點右下角「✨ AI 智慧規劃」輸入地點（如愛寶樂園、景福宮）自動生成攻略！</div>` :
                 dayItems.map((item, idx) => {
                     const comments = Array.isArray(item.comments) ? item.comments : [];
                     return `
                     <div class="relative pl-6">
-                        <!-- 時間軸垂直線與圓點 -->
                         <div class="absolute left-2 top-3 bottom-0 w-0.5 bg-[#E8927C]/30"></div>
                         <div class="absolute left-0 top-3 w-4 h-4 rounded-full bg-[#E8927C] text-white text-[9px] font-bold flex items-center justify-center shadow-xs">${idx + 1}</div>
 
@@ -815,24 +1026,24 @@
                                         ${item.duration ? `<span class="text-[10px] text-gray-400">⏱️ 停留 ${item.duration}</span>` : ''}
                                     </div>
                                     <h3 class="text-sm font-bold text-[#3D3A36] mt-1">${item.title}</h3>
+                                    <p class="text-[10px] text-gray-400 mt-0.5">📍 ${item.location || item.naverQuery || ''}</p>
                                 </div>
-                                <a href="${getMapUrl(item.location || item.title)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shadow-xs shrink-0">
+                                <a href="${getNaverDirectUrl(item)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shadow-xs shrink-0">
                                     🧭 ${navLabel}
                                 </a>
                             </div>
 
-                            <!-- 行程下方備註 -->
-                            <div class="text-xs text-gray-600 bg-[#FDFBF7] p-2.5 rounded-xl border border-[#F3EFE6] leading-relaxed">
-                                <span class="text-[10px] font-bold text-[#D9775E] block mb-0.5">📝 行程備註</span>
-                                ${item.note ? item.note : '<span class="text-gray-400">尚無備註</span>'}
+                            <!-- 交通方式 / 推薦項目 / 小提示 -->
+                            <div class="text-xs text-gray-700 bg-[#FDFBF7] p-2.5 rounded-xl border border-[#F3EFE6] leading-relaxed whitespace-pre-line">
+                                <span class="text-[10px] font-bold text-[#D9775E] block mb-0.5">📝 交通・推薦・小提示</span>${item.note ? item.note : '<span class="text-gray-400">尚無備註</span>'}
                             </div>
 
-                            <!-- Funliday 旅伴即時留言討論區 -->
+                            <!-- 旅伴即時留言討論區 -->
                             <div class="bg-[#F8F4EC]/70 p-2.5 rounded-xl space-y-1.5">
                                 <p class="text-[10px] font-bold text-[#3A5A78]">💬 旅伴即時留言 (${comments.length})</p>
                                 ${comments.map(c => `<p class="text-[11px] text-gray-700"><strong>${c.author}：</strong>${c.text}</p>`).join('')}
                                 <div class="flex gap-1.5 pt-1">
-                                    <input type="text" id="comment-input-${item.id}" onkeydown="if(event.key==='Enter') addItineraryComment(${item.id})" placeholder="以「${currentUser}」身分留言討論..." class="flex-1 bg-white border border-[#EFECE6] rounded-lg px-2.5 py-1 text-[11px]">
+                                    <input type="text" id="comment-input-${item.id}" onkeydown="if(event.key==='Enter') addItineraryComment(${item.id})" placeholder="以「${currentUser}」身分留言..." class="flex-1 bg-white border border-[#EFECE6] rounded-lg px-2.5 py-1 text-[11px]">
                                     <button onclick="addItineraryComment(${item.id})" class="bg-[#3A5A78] text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">送出</button>
                                 </div>
                             </div>
@@ -850,7 +1061,6 @@
                             </div>
                         </div>
 
-                        <!-- 景點之間交通時間銜接提示 -->
                         ${idx < dayItems.length - 1 ? `
                         <div class="my-1.5 ml-2 inline-flex items-center gap-1.5 bg-[#EBF4FA] text-[#3A5A78] text-[10px] font-bold px-2.5 py-1 rounded-full">
                             <span>${item.transit || '🚶 移動前往下一站'}</span>
@@ -858,7 +1068,7 @@
                     </div>`;
                 }).join('');
 
-            if (itineraryViewMode === 'map') renderMapMode();
+            if (itineraryViewMode === 'map') setTimeout(renderMapMode, 60);
         }
 
         function addItineraryComment(itemId) {
@@ -890,6 +1100,19 @@
             renderItinerary();
         }
 
+        function autoFillItineraryFields() {
+            const raw = document.getElementById('itin-title').value.trim();
+            if (!raw) return alert('請先輸入景點或餐廳名稱（如：愛寶樂園、景福宮）！');
+            const expanded = smartExpandItinerary(raw);
+            document.getElementById('itin-title').value = expanded.title;
+            document.getElementById('itin-type').value = expanded.type;
+            document.getElementById('itin-duration').value = expanded.duration;
+            document.getElementById('itin-naver-query').value = expanded.naverQuery;
+            document.getElementById('itin-location').value = expanded.location;
+            document.getElementById('itin-transit').value = expanded.transit;
+            document.getElementById('itin-note').value = expanded.note;
+        }
+
         function openItineraryModal(itemId = null) {
             const trip = getActiveTrip();
             editingItineraryId = itemId;
@@ -901,6 +1124,7 @@
                 document.getElementById('itin-duration').value = item.duration || '';
                 document.getElementById('itin-type').value = item.type || '景點';
                 document.getElementById('itin-title').value = item.title || '';
+                document.getElementById('itin-naver-query').value = item.naverQuery || '';
                 document.getElementById('itin-location').value = item.location || '';
                 document.getElementById('itin-transit').value = item.transit || '';
                 document.getElementById('itin-note').value = item.note || '';
@@ -910,6 +1134,7 @@
                 document.getElementById('itin-duration').value = '90分鐘';
                 document.getElementById('itin-type').value = '景點';
                 document.getElementById('itin-title').value = '';
+                document.getElementById('itin-naver-query').value = '';
                 document.getElementById('itin-location').value = '';
                 document.getElementById('itin-transit').value = '🚇 地鐵/步行 約 20 分鐘';
                 document.getElementById('itin-note').value = '';
@@ -921,16 +1146,21 @@
 
         function saveItineraryItem() {
             const trip = getActiveTrip();
-            const title = document.getElementById('itin-title').value.trim();
-            if (!title) return alert('請輸入行程名稱！');
+            const rawTitle = document.getElementById('itin-title').value.trim();
+            if (!rawTitle) return alert('請輸入行程名稱！');
+            const expanded = smartExpandItinerary(rawTitle);
+
             const payload = {
                 time: document.getElementById('itin-time').value.trim() || '彈性',
-                duration: document.getElementById('itin-duration').value.trim(),
+                duration: document.getElementById('itin-duration').value.trim() || expanded.duration,
                 type: document.getElementById('itin-type').value,
-                title,
-                location: document.getElementById('itin-location').value.trim() || title,
-                transit: document.getElementById('itin-transit').value.trim(),
-                note: document.getElementById('itin-note').value.trim()
+                title: rawTitle,
+                naverQuery: document.getElementById('itin-naver-query').value.trim() || expanded.naverQuery,
+                location: document.getElementById('itin-location').value.trim() || expanded.location,
+                lat: expanded.lat,
+                lng: expanded.lng,
+                transit: document.getElementById('itin-transit').value.trim() || expanded.transit,
+                note: document.getElementById('itin-note').value.trim() || expanded.note
             };
             if (editingItineraryId) {
                 const item = trip.itinerary.find(i => i.id === editingItineraryId);
@@ -951,34 +1181,90 @@
             renderItinerary();
         }
 
+        // --- Funliday 多點編號與路線連線地圖 ---
         function renderMapMode() {
             const trip = getActiveTrip();
             const items = trip.itinerary.filter(i => i.day === currentDay);
             const korea = isKoreaTrip();
-            const navLabel = korea ? 'Naver 導航' : 'Google 導航';
-            document.getElementById('map-title-label').innerText = korea ? '📍 韓國當日動線 (Naver Map)' : '📍 當日動線 (Google Maps)';
-            document.getElementById('map-engine-badge').innerText = korea ? 'Naver Map' : 'Google Maps';
+            const navLabel = korea ? 'Naver 直達' : 'Google 導航';
 
-            const iframeContainer = document.getElementById('map-iframe-container');
+            document.getElementById('map-title-label').innerText = korea ? '📍 Funliday 當日動線地圖 (直達 Naver 韓文地址)' : '📍 Funliday 當日動線地圖 (Google Maps)';
+            document.getElementById('map-engine-badge').innerText = korea ? 'Naver 韓文精準定位' : 'Google Maps';
+
             const mapListContainer = document.getElementById('itinerary-map-list');
+            const mapDiv = document.getElementById('funliday-leaflet-map');
+
+            if (!leafletMap && typeof L !== 'undefined') {
+                leafletMap = L.map('funliday-leaflet-map').setView([37.5636, 126.9850], 12);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(leafletMap);
+                leafletLayerGroup = L.layerGroup().addTo(leafletMap);
+            }
+
+            if (leafletMap && leafletLayerGroup) {
+                leafletMap.invalidateSize();
+                leafletLayerGroup.clearLayers();
+                const coords = [];
+
+                items.forEach((item, idx) => {
+                    const exp = smartExpandItinerary(item.title);
+                    const lat = item.lat || exp.lat || (37.5612 + idx * 0.006);
+                    const lng = item.lng || exp.lng || (126.9942 + idx * 0.006);
+                    coords.push([lat, lng]);
+
+                    const icon = L.divIcon({
+                        className: '',
+                        html: `<div class="funliday-pin">${idx + 1}</div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon }).addTo(leafletLayerGroup);
+                    marker.bindPopup(`
+                        <div style="font-family:sans-serif;min-width:150px;">
+                            <div style="font-weight:bold;font-size:12px;margin-bottom:4px;">${idx + 1}. ${item.title}</div>
+                            <div style="font-size:11px;color:#666;margin-bottom:6px;">${item.naverQuery || item.location}</div>
+                            <a href="${getNaverDirectUrl(item)}" target="_blank" style="display:inline-block;background:#03C75A;color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;">🧭 開啟 ${navLabel}</a>
+                        </div>
+                    `);
+                });
+
+                if (coords.length > 1) {
+                    L.polyline(coords, { color: '#E8927C', weight: 4, opacity: 0.85, dashArray: '6, 6' }).addTo(leafletLayerGroup);
+                    leafletMap.fitBounds(L.latLngBounds(coords), { padding: [36, 36] });
+                } else if (coords.length === 1) {
+                    leafletMap.setView(coords[0], 14);
+                }
+            }
+
             if (items.length === 0) {
-                iframeContainer.innerHTML = `<p class="text-xs text-gray-400">今日尚無景點</p>`;
-                mapListContainer.innerHTML = '';
+                mapListContainer.innerHTML = `<div class="bg-white rounded-xl p-4 border border-[#EFECE6] text-center text-xs text-gray-400">今日尚無景點可顯示動線</div>`;
                 return;
             }
-            const primaryLoc = encodeURIComponent(items[0].location || items[0].title);
-            iframeContainer.innerHTML = `<iframe width="100%" height="100%" frameborder="0" scrolling="no" src="https://maps.google.com/maps?q=${primaryLoc}&t=&z=14&ie=UTF8&iwloc=&output=embed"></iframe>`;
-            mapListContainer.innerHTML = items.map((item, idx) => `
-                <div class="bg-white rounded-xl p-3 border border-[#EFECE6] flex justify-between items-center text-xs">
+
+            mapListContainer.innerHTML = items.map((item, idx) => {
+                const exp = smartExpandItinerary(item.title);
+                const lat = item.lat || exp.lat;
+                const lng = item.lng || exp.lng;
+                return `
+                <div onclick="focusMapPin(${lat}, ${lng})" class="bg-white rounded-xl p-3 border border-[#EFECE6] flex justify-between items-center text-xs cursor-pointer active:bg-[#FDFBF7]">
                     <div class="flex items-center gap-2.5 min-w-0">
                         <span class="w-6 h-6 rounded-full bg-[#E8927C] text-white font-bold flex items-center justify-center text-[11px] shrink-0">${idx + 1}</span>
                         <div class="min-w-0">
                             <p class="font-bold text-[#3D3A36] truncate">${item.title}</p>
-                            <p class="text-[10px] text-gray-400 truncate">📍 ${item.location} ・ ${item.time}</p>
+                            <p class="text-[10px] text-gray-400 truncate">🇰🇷 Naver 關鍵字：${item.naverQuery || exp.naverQuery}</p>
                         </div>
                     </div>
-                    <a href="${getMapUrl(item.location || item.title)}" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shrink-0 ml-2">${navLabel}</a>
-                </div>`).join('');
+                    <a href="${getNaverDirectUrl(item)}" onclick="event.stopPropagation()" target="_blank" class="bg-[#03C75A] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shrink-0 ml-2">${navLabel}</a>
+                </div>`;
+            }).join('');
+        }
+
+        function focusMapPin(lat, lng) {
+            if (leafletMap && lat && lng) {
+                leafletMap.setView([lat, lng], 15);
+            }
         }
 
         // --- 購物清單 ---
@@ -1091,11 +1377,11 @@
             if (!rawName) return alert('請輸入商品名稱！');
             const rec = recognizeProductName(rawName);
             const payload = {
-                name: rawName,
+                name: rec.name,
                 store: document.getElementById('new-shop-store').value.trim() || rec.store,
                 price: parseFloat(document.getElementById('new-shop-price').value) || 0,
                 desc: document.getElementById('new-shop-desc').value.trim() || rec.desc,
-                image: pendingNewShopImage || rec.image
+                image: (pendingNewShopImage && !pendingNewShopImage.includes('%F0%9F%9B%8D')) ? pendingNewShopImage : rec.image
             };
             if (editingShopId) {
                 const item = trip.shopping.find(i => i.id === editingShopId);
@@ -1264,6 +1550,8 @@
             const f = trip.flight || initialSeoulTrip.flight;
             const h = trip.hotel || initialSeoulTrip.hotel;
             document.getElementById('flight-pnr-badge').innerText = f.pnr || '未填寫';
+            document.getElementById('hotel-direct-nav-btn').href = getNaverDirectUrl({ naverQuery: h.naverQuery || '위코스테이명동', location: h.address, title: h.name });
+
             document.getElementById('flight-card-container').innerHTML = `
                 <div class="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFECE6] space-y-2.5">
                     <div class="border-b border-[#EFECE6] pb-2">
@@ -1325,6 +1613,7 @@
         function openHotelModal() {
             const h = getActiveTrip().hotel;
             document.getElementById('h-name').value = h.name || '';
+            document.getElementById('h-naver-query').value = h.naverQuery || '';
             document.getElementById('h-address').value = h.address || '';
             document.getElementById('h-phone').value = h.phone || '';
             document.getElementById('h-booking').value = h.bookingNo || '';
@@ -1338,6 +1627,7 @@
             const trip = getActiveTrip();
             trip.hotel = {
                 name: document.getElementById('h-name').value.trim(),
+                naverQuery: document.getElementById('h-naver-query').value.trim(),
                 address: document.getElementById('h-address').value.trim(),
                 phone: document.getElementById('h-phone').value.trim(),
                 bookingNo: document.getElementById('h-booking').value.trim(),
@@ -1449,10 +1739,10 @@
                 id: 'trip_' + Date.now(), title, dates, currency,
                 rateToHKD: CURRENCY_META[currency].defaultRate, rateMode: '預設匯率',
                 buddies: buddies.length > 0 ? buddies : ['我'],
-                days: [{ day: 1, label: 'Day 1 抵達與探索', weather: `${title} ・ 天氣資訊`, tip: '可隨時新增時間軸景點' }],
+                days: [{ day: 1, label: 'Day 1 抵達與探索', weather: `${title} ・ 天氣資訊`, tip: '點右下角 ✨ AI 智慧規劃自動生成攻略' }],
                 itinerary: [], shopping: [], expenses: [], luggage: [],
                 flight: { pnr: '', outbound: { date: '', flightNo: '', route: '' }, inbound: { date: '', flightNo: '', route: '' } },
-                hotel: { name: '', address: '', phone: '', bookingNo: '', nights: '', subway: '', bus: '' }
+                hotel: { name: '', naverQuery: '', address: '', phone: '', bookingNo: '', nights: '', subway: '', bus: '' }
             };
             store.trips.unshift(newTrip); store.activeTripId = newTrip.id; currentDay = 1;
             saveStore(); renderAll(); closeTripModal();
@@ -1464,7 +1754,22 @@
             const text = document.getElementById('ai-input').value.trim();
             if (!text) return alert('請輸入內容');
             if (target === 'itinerary') {
-                trip.itinerary.push({ id: Date.now(), day: currentDay, type: '景點', time: '彈性', duration: '90分鐘', title: text, location: text, transit: '🚶 移動前往下一站', note: '', comments: [] });
+                const exp = smartExpandItinerary(text);
+                trip.itinerary.push({
+                    id: Date.now(),
+                    day: currentDay,
+                    type: exp.type,
+                    time: '彈性',
+                    duration: exp.duration,
+                    title: exp.title,
+                    naverQuery: exp.naverQuery,
+                    location: exp.location,
+                    lat: exp.lat,
+                    lng: exp.lng,
+                    transit: exp.transit,
+                    note: exp.note,
+                    comments: []
+                });
                 saveStore(); renderItinerary(); switchTab('itinerary');
             } else {
                 const rec = recognizeProductName(text);
