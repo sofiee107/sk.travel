@@ -80,7 +80,7 @@
         <!-- 主要內容區 -->
         <main class="flex-1 p-4 space-y-4">
 
-            <!-- 分頁 1：每日行程（Funliday 時間軸 + 多點連線地圖） -->
+            <!-- 分頁 1：每日行程 -->
             <section id="tab-itinerary" class="tab-content space-y-3.5">
                 <div class="flex justify-between items-center gap-2">
                     <div class="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1 flex-1" id="day-tabs"></div>
@@ -90,7 +90,6 @@
                     </div>
                 </div>
 
-                <!-- 天氣與快速操作列 -->
                 <div class="bg-gradient-to-r from-[#EBF4FA] to-[#F5F9FC] rounded-2xl p-3 border border-[#DCEAF5] flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2.5 min-w-0">
                         <span class="text-xl">🧥</span>
@@ -101,14 +100,12 @@
                     </div>
                     <div class="flex gap-1 shrink-0">
                         <button onclick="openItineraryModal()" class="text-[10px] bg-[#E8927C] text-white px-2.5 py-1.5 rounded-lg font-bold shadow-xs">+ 景點</button>
-                        <button onclick="addNewDay()" class="text-[10px] bg-white text-[#3A5A78] px-2 py-1.5 rounded-lg font-bold shadow-xs">+ 天數</button>
+                        <button onclick="addNewDay()" class="text-[10px] bg-white text-[#3A5A78] px-2.5 py-1.5 rounded-lg font-bold shadow-xs">+ 天數</button>
                     </div>
                 </div>
 
-                <!-- Funliday 視覺化時間軸列表 -->
                 <div id="itinerary-list" class="space-y-2"></div>
 
-                <!-- Funliday 多點路線互動地圖模式 -->
                 <div id="itinerary-map-view" class="hidden space-y-3">
                     <div class="bg-white rounded-2xl p-3 border border-[#EFECE6] shadow-sm space-y-2">
                         <div class="flex justify-between items-center">
@@ -136,8 +133,9 @@
                 <input type="file" id="quick-img-upload" accept="image/*" class="hidden" onchange="handleQuickImageUpload(event)">
             </section>
 
-            <!-- 分頁 3：多幣別分帳記帳 -->
+            <!-- 分頁 3：多幣別分帳記帳（完整平分/代付/不分帳 + 每日/每類消費總結） -->
             <section id="tab-expense" class="tab-content hidden space-y-4">
+                <!-- 幣別與匯率設定 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">💱 幣別與匯率設定 (對港幣 HKD)</h3>
@@ -164,6 +162,22 @@
                     </div>
                 </div>
 
+                <!-- 📊 消費總結看板：每日消費 vs 每類消費 -->
+                <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
+                    <div class="flex justify-between items-center gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-[#3D3A36]">📊 消費總結分析</h3>
+                            <p class="text-[10px] text-gray-400" id="expense-grand-total">總支出：₩0 (≈ HK$0)</p>
+                        </div>
+                        <div class="flex bg-[#F0EBE1] p-0.5 rounded-xl shrink-0">
+                            <button onclick="setSummaryMode('category')" id="sum-btn-category" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs">🏷️ 每類消費</button>
+                            <button onclick="setSummaryMode('daily')" id="sum-btn-daily" class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500">📅 每日消費</button>
+                        </div>
+                    </div>
+                    <div id="expense-summary-box" class="space-y-2 text-xs"></div>
+                </div>
+
+                <!-- ⚖️ 同行旅伴分帳結算 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">⚖️ 同行旅伴分帳結算</h3>
@@ -172,32 +186,52 @@
                     <div id="settlement-box" class="bg-[#FDFBF7] rounded-xl p-3 border border-[#EFECE6] text-xs space-y-1"></div>
                 </div>
 
+                <!-- ✍️ 新增 / 編輯消費紀錄 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2.5">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]" id="exp-form-title">✍️ 新增消費紀錄</h3>
                         <button id="exp-cancel-edit-btn" onclick="cancelExpenseEdit()" class="hidden text-[11px] text-gray-400 underline">取消編輯</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="exp-title" placeholder="項目 (如：雪濃湯/車票)" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                        <input type="number" id="exp-amount" placeholder="外幣金額" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">消費日期 / 天數</label>
+                            <select id="exp-day" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs font-bold"></select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">消費類別</label>
+                            <select id="exp-category" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-2.5 py-2 text-xs font-bold">
+                                <option value="餐飲美食">🍽️ 餐飲美食</option>
+                                <option value="交通移動">🚇 交通移動</option>
+                                <option value="購物血拚">🛍️ 購物血拚</option>
+                                <option value="門票體驗">🎟️ 門票體驗</option>
+                                <option value="住宿其他">🏨 住宿其他</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <select id="exp-payer" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs"></select>
-                        <select id="exp-split" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
-                            <option value="all">👥 全員平分</option>
-                            <option value="solo">🙋 各自負擔 (不分帳)</option>
-                        </select>
+                        <input type="text" id="exp-title" placeholder="項目 (如：雪濃湯 / 地鐵卡)" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                        <input type="number" id="exp-amount" placeholder="外幣金額" class="bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
+                    </div>
+                    <div class="grid grid-cols-1 gap-2">
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">誰先付款墊付？</label>
+                            <select id="exp-payer" onchange="syncSplitOptionsByPayer()" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-bold"></select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">分帳／代付／不分帳規則</label>
+                            <select id="exp-split" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs font-bold"></select>
+                        </div>
                     </div>
                     <input type="text" id="exp-note" placeholder="消費備註（選填）" class="w-full bg-[#FDFBF7] border border-[#EFECE6] rounded-xl px-3 py-2 text-xs">
                     <button onclick="submitExpenseForm()" id="exp-submit-btn" class="w-full bg-[#E8927C] text-white font-bold text-xs py-2.5 rounded-xl shadow-sm">加入帳本 (即時同步)</button>
                 </div>
 
+                <!-- 消費明細列表 -->
                 <div id="expense-list" class="space-y-2"></div>
             </section>
 
             <!-- 分頁 4：航班、住宿、地鐵圖、行李 -->
             <section id="tab-tools" class="tab-content hidden space-y-4">
-                <!-- ✈️ 航班資訊 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">✈️ 航班資訊 (PNR: <span id="flight-pnr-badge" class="font-mono text-[#E8927C]">54WOPR</span>)</h3>
@@ -206,7 +240,6 @@
                     <div id="flight-card-container" class="space-y-2 text-xs"></div>
                 </div>
 
-                <!-- 🏨 住宿資訊 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-bold text-[#3D3A36]">🏨 住宿與鄰近交通</h3>
@@ -218,7 +251,6 @@
                     <div id="hotel-card-container" class="space-y-2 text-xs"></div>
                 </div>
 
-                <!-- 🚇 地鐵圖速查 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <h3 class="text-sm font-bold text-[#3D3A36]">🚇 當地鐵路與地鐵圖速查</h3>
                     <div class="grid grid-cols-3 gap-2 text-center text-xs">
@@ -228,7 +260,6 @@
                     </div>
                 </div>
 
-                <!-- 🧳 行李打包清單 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-3">
                     <div class="flex justify-between items-center">
                         <div>
@@ -248,7 +279,6 @@
                     <div id="luggage-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
                 </div>
 
-                <!-- 🆘 緊急電話 -->
                 <div class="bg-white rounded-2xl p-4 border border-[#EFECE6] shadow-sm space-y-2">
                     <h3 class="text-sm font-bold text-[#3D3A36]">🆘 當地緊急聯絡電話</h3>
                     <div class="grid grid-cols-3 gap-2 text-center text-xs">
@@ -517,7 +547,6 @@
             USD: { symbol: '$', name: '美元', defaultRate: 7.78 }
         };
 
-        // 韓國熱門景點智慧知識庫（自動補全韓文直達地址、座標、交通方式、推薦項目、小提示）
         const PLACE_KNOWLEDGE = [
             {
                 keys: ['愛寶樂園', 'everland', '에버랜드'],
@@ -528,7 +557,7 @@
                 location: '京畿道龍仁市處仁區蒲谷邑愛寶樂園路 199 (에버랜드)',
                 lat: 37.2939, lng: 127.2025,
                 transit: '🚌 搭乘 5002 號紅線直達巴士（新論峴/江南站出發約 50 分鐘）或龍仁輕電鐵轉免費接駁車',
-                note: '【交通】明洞出發可搭地鐵至江南站/新論峴站轉 5002 號巴士，或預約 Klook/KKday 往返專車直達。\n【推薦項目】T-Express 木質過山車、熊貓世界（看福寶家族）、遺失的峽谷水陸兩棲車、夜間煙火秀。\n【小提示】山區氣溫比首爾市區低 3~5°C，務必貼滿暖暖包；入園後立刻用 Everland App 抽 Smart Queue 預約熱門設施。'
+                note: '【交通】明洞出發可搭地鐵至江南站/新論峴站轉 5002 號巴士，或預約往返專車直達。\n【推薦項目】T-Express 木質過山車、熊貓世界（看福寶家族）、遺失的峽谷水陸兩棲車、夜間煙火秀。\n【小提示】山區氣溫比首爾市區低 3~5°C，務必貼滿暖暖包；入園後立刻用 Everland App 抽 Smart Queue 預約熱門設施。'
             },
             {
                 keys: ['景福宮', '경복궁', '韓服'],
@@ -606,17 +635,6 @@
                 lat: 37.5665, lng: 127.0092,
                 transit: '🚇 地鐵 4 號線「東大門歷史文化公園站」1 號出口（距離忠武路僅 1 站）',
                 note: '【交通】地鐵 4 號線東大門歷史文化公園站 1 號出口直達 DDP。\n【推薦項目】DDP 建築夜景、nyu nyu 飾品批發、apM PLACE、陳玉華一隻雞。\n【小提示】nyu nyu 營業至凌晨，批發大樓週六晚間多數公休。'
-            },
-            {
-                keys: ['weco', '明洞weco', '酒店', '飯店'],
-                title: '明洞 WECO STAY 酒店 (入住/寄放行李)',
-                type: '交通',
-                duration: '45分鐘',
-                naverQuery: '위코스테이명동',
-                location: '首爾特別市中區昌慶宮路1街14 (위코스테이명동)',
-                lat: 37.5612, lng: 126.9942,
-                transit: '🚇 地鐵 4 號線「忠武路站」8 號出口步行 4 分鐘 / 機場巴士 6001 號忠武路站下車',
-                note: '【交通】仁川機場 T2 搭機場巴士 6001 號至忠武路站下車步行約 4 分鐘。\n【小提示】採自助式密碼入住，入住前請留意電郵或預訂訊息發送的房號與大門密碼。'
             }
         ];
 
@@ -647,11 +665,10 @@
                 lat: 37.5636 + (Math.random() - 0.5) * 0.02,
                 lng: 126.9850 + (Math.random() - 0.5) * 0.02,
                 transit: '🚇 建議使用 Naver Map 查詢地鐵與公車轉乘路線',
-                note: `【交通】點擊右上角 Naver 導航查看即時路線。\n【推薦項目】可於出發前補充必吃美食或拍照打卡點。\n【小提示】留意店家營業時間與公休日。`
+                note: `【交通】點擊右上角 Naver 直達查看即時路線。\n【推薦項目】可於出發前補充必吃美食或拍照打卡點。\n【小提示】留意店家營業時間與公休日。`
             };
         }
 
-        // 購物清單智慧識別庫
         const PRODUCT_RULES = [
             { keys: ['痘痘貼', '暗瘡貼', 'olive young'], fullName: 'Olive Young Care Plus 舒緩痘痘貼 (102片增量裝)', store: 'Olive Young', emoji: '🩹', bg: '#E6F4EA', fg: '#1E6B3B', desc: '【推薦理由】韓國國民銷量冠軍，0.1mm 超薄隱形防水，妝前貼合不易翹邊。' },
             { keys: ['香蕉牛奶', 'binggrae', '牛奶'], fullName: 'Binggrae 經典香蕉調味乳 (바나나맛우유)', store: '便利店 / 樂天超市', emoji: '🍌', bg: '#FEF3C7', fg: '#B45309', desc: '【推薦理由】韓國必喝胖胖瓶香蕉牛奶，另有草莓、哈密瓜口味，超商常見 2+1 優惠。' },
@@ -771,7 +788,7 @@
             }
         };
 
-        const STORAGE_KEY = 'travel_notebook_funliday_v4';
+        const STORAGE_KEY = 'travel_notebook_funliday_v5';
         const CLOUD_CFG_KEY = 'travel_notebook_firebase_cfg';
 
         let store = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
@@ -782,6 +799,7 @@
         let currentUser = localStorage.getItem('travel_current_user') || '我';
         let currentDay = 1;
         let itineraryViewMode = 'list';
+        let summaryMode = 'category'; // 'category' 或 'daily'
         let shopFilter = '全部';
         let luggageCatFilter = '全部';
         let editingTripId = null;
@@ -872,7 +890,6 @@
             return trip.currency === 'KRW' || /韓國|首爾|釜山|濟州|korea|seoul/i.test(trip.title || '');
         }
 
-        // 精準 Naver Map 韓文地址直達連結
         function getNaverDirectUrl(itemOrQuery) {
             if (!isKoreaTrip()) {
                 const q = typeof itemOrQuery === 'string' ? itemOrQuery : (itemOrQuery.location || itemOrQuery.title || '');
@@ -881,7 +898,6 @@
             if (typeof itemOrQuery === 'string') {
                 return `https://map.naver.com/p/search/${encodeURIComponent(itemOrQuery)}`;
             }
-            // 優先使用韓文標準地標 naverQuery，避免繁簡中文造成 Naver 辨識失敗
             const koreanTarget = (itemOrQuery.naverQuery || '').trim() || smartExpandItinerary(itemOrQuery.title).naverQuery || itemOrQuery.location || itemOrQuery.title;
             return `https://map.naver.com/p/search/${encodeURIComponent(koreanTarget)}`;
         }
@@ -950,12 +966,10 @@
             const activeBtn = document.getElementById('nav-' + tabName);
             activeBtn.classList.remove('text-gray-400', 'font-medium');
             activeBtn.classList.add('text-[#E8927C]', 'font-bold');
-            if (tabName === 'itinerary' && itineraryViewMode === 'map') {
-                setTimeout(renderMapMode, 80);
-            }
+            if (tabName === 'itinerary' && itineraryViewMode === 'map') setTimeout(renderMapMode, 80);
         }
 
-        // --- Funliday 時間軸行程渲染 ---
+        // --- Funliday 時間軸行程 ---
         function renderDayTabs() {
             const trip = getActiveTrip();
             if (!trip.days.some(d => d.day === currentDay)) currentDay = trip.days[0]?.day || 1;
@@ -983,6 +997,7 @@
             saveStore();
             renderDayTabs();
             renderItinerary();
+            renderExpenseSection();
         }
 
         function setItineraryView(mode) {
@@ -1033,12 +1048,10 @@
                                 </a>
                             </div>
 
-                            <!-- 交通方式 / 推薦項目 / 小提示 -->
                             <div class="text-xs text-gray-700 bg-[#FDFBF7] p-2.5 rounded-xl border border-[#F3EFE6] leading-relaxed whitespace-pre-line">
                                 <span class="text-[10px] font-bold text-[#D9775E] block mb-0.5">📝 交通・推薦・小提示</span>${item.note ? item.note : '<span class="text-gray-400">尚無備註</span>'}
                             </div>
 
-                            <!-- 旅伴即時留言討論區 -->
                             <div class="bg-[#F8F4EC]/70 p-2.5 rounded-xl space-y-1.5">
                                 <p class="text-[10px] font-bold text-[#3A5A78]">💬 旅伴即時留言 (${comments.length})</p>
                                 ${comments.map(c => `<p class="text-[11px] text-gray-700"><strong>${c.author}：</strong>${c.text}</p>`).join('')}
@@ -1048,7 +1061,6 @@
                                 </div>
                             </div>
 
-                            <!-- 順序調整 / 編輯 / 刪除 -->
                             <div class="flex items-center justify-between pt-1 border-t border-[#F7F4EE] text-[11px]">
                                 <div class="flex items-center gap-1">
                                     <button onclick="moveItineraryItem(${item.id}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-0.5 rounded bg-[#F8F4EC] text-[#3D3A36] font-bold disabled:opacity-30">▲ 上移</button>
@@ -1181,7 +1193,6 @@
             renderItinerary();
         }
 
-        // --- Funliday 多點編號與路線連線地圖 ---
         function renderMapMode() {
             const trip = getActiveTrip();
             const items = trip.itinerary.filter(i => i.day === currentDay);
@@ -1192,7 +1203,6 @@
             document.getElementById('map-engine-badge').innerText = korea ? 'Naver 韓文精準定位' : 'Google Maps';
 
             const mapListContainer = document.getElementById('itinerary-map-list');
-            const mapDiv = document.getElementById('funliday-leaflet-map');
 
             if (!leafletMap && typeof L !== 'undefined') {
                 leafletMap = L.map('funliday-leaflet-map').setView([37.5636, 126.9850], 12);
@@ -1262,9 +1272,7 @@
         }
 
         function focusMapPin(lat, lng) {
-            if (leafletMap && lat && lng) {
-                leafletMap.setView([lat, lng], 15);
-            }
+            if (leafletMap && lat && lng) leafletMap.setView([lat, lng], 15);
         }
 
         // --- 購物清單 ---
@@ -1416,7 +1424,49 @@
         }
         function closeLightbox() { document.getElementById('lightbox-modal').classList.add('hidden'); }
 
-        // --- 記帳與分帳 ---
+        // --- 記帳、分帳/代付/不分帳、每日與每類消費總結 ---
+        function setSummaryMode(mode) {
+            summaryMode = mode;
+            const btnCat = document.getElementById('sum-btn-category');
+            const btnDay = document.getElementById('sum-btn-daily');
+            if (mode === 'category') {
+                btnCat.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs';
+                btnDay.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500';
+            } else {
+                btnDay.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#3D3A36] shadow-2xs';
+                btnCat.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-500';
+            }
+            renderExpenseSummary();
+        }
+
+        function syncSplitOptionsByPayer(selectedValue = null) {
+            const trip = getActiveTrip();
+            const payer = document.getElementById('exp-payer').value;
+            const splitSelect = document.getElementById('exp-split');
+            const others = trip.buddies.filter(b => b !== payer);
+
+            let optionsHtml = `<option value="all">👥 全員平分 (${trip.buddies.join('、')} 各付 1/${trip.buddies.length})</option>`;
+            others.forEach(other => {
+                optionsHtml += `<option value="treat:${other}">🎁 ${payer} 幫「${other}」代付（${other} 欠 ${payer} 全額）</option>`;
+            });
+            optionsHtml += `<option value="solo">🙋 ${payer} 各自負擔（不分帳，純記錄）</option>`;
+
+            splitSelect.innerHTML = optionsHtml;
+            if (selectedValue && [...splitSelect.options].some(o => o.value === selectedValue)) {
+                splitSelect.value = selectedValue;
+            }
+        }
+
+        function formatSplitLabel(exp) {
+            if (!exp.split || exp.split === 'all') return '👥 全員平分';
+            if (exp.split === 'solo') return `🙋 ${exp.payer} 各自負擔 (不分帳)`;
+            if (exp.split.startsWith('treat:')) {
+                const target = exp.split.split(':')[1];
+                return `🎁 ${exp.payer} 幫「${target}」代付`;
+            }
+            return exp.split;
+        }
+
         function changeTripCurrency() {
             const trip = getActiveTrip();
             const newCurr = document.getElementById('exp-currency-select').value;
@@ -1445,22 +1495,92 @@
             setTimeout(() => { btn.innerText = '🔄 更新匯率'; }, 2000);
         }
 
+        function renderExpenseSummary() {
+            const trip = getActiveTrip();
+            const meta = CURRENCY_META[trip.currency] || CURRENCY_META.KRW;
+            const totalForeign = trip.expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+            const totalHKD = Math.round(totalForeign * trip.rateToHKD);
+            document.getElementById('expense-grand-total').innerText = `總支出：${meta.symbol}${totalForeign.toLocaleString()} (≈ HK$${totalHKD.toLocaleString()})`;
+
+            const box = document.getElementById('expense-summary-box');
+            if (trip.expenses.length === 0) {
+                box.innerHTML = `<p class="text-gray-400">尚無消費紀錄，新增後自動統計每日與每類消費。</p>`;
+                return;
+            }
+
+            const map = {};
+            if (summaryMode === 'category') {
+                trip.expenses.forEach(e => {
+                    const key = e.category || '住宿其他';
+                    map[key] = (map[key] || 0) + (Number(e.amount) || 0);
+                });
+            } else {
+                trip.days.forEach(d => { map[d.label] = 0; });
+                trip.expenses.forEach(e => {
+                    const key = e.dayLabel || `Day ${e.day || 1}`;
+                    map[key] = (map[key] || 0) + (Number(e.amount) || 0);
+                });
+            }
+
+            const entries = Object.entries(map).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+            box.innerHTML = entries.map(([label, amt]) => {
+                const pct = totalForeign > 0 ? Math.round((amt / totalForeign) * 100) : 0;
+                const hkd = Math.round(amt * trip.rateToHKD);
+                return `
+                <div class="bg-[#FDFBF7] p-2.5 rounded-xl border border-[#EFECE6] space-y-1">
+                    <div class="flex justify-between items-center font-bold text-[#3D3A36]">
+                        <span>${label}</span>
+                        <span>${meta.symbol}${amt.toLocaleString()} <span class="text-[10px] text-gray-400 font-normal">(≈ HK$${hkd.toLocaleString()}・${pct}%)</span></span>
+                    </div>
+                    <div class="w-full bg-[#EFECE6] h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-[#E8927C] h-full rounded-full" style="width:${pct}%"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
         function renderExpenseSection() {
             const trip = getActiveTrip();
             const meta = CURRENCY_META[trip.currency] || CURRENCY_META.KRW;
             document.getElementById('exp-currency-select').value = trip.currency;
             document.getElementById('exp-rate-input').value = trip.rateToHKD;
             document.getElementById('exp-amount').placeholder = `${meta.name}金額`;
-            document.getElementById('exp-payer').innerHTML = trip.buddies.map(b => `<option value="${b}">💳 ${b} 先墊付</option>`).join('');
 
+            // 填入天數下拉選單
+            const daySelect = document.getElementById('exp-day');
+            const prevDayVal = daySelect.value;
+            daySelect.innerHTML = trip.days.map(d => `<option value="${d.day}">${d.label}</option>`).join('');
+            if (prevDayVal && [...daySelect.options].some(o => o.value === prevDayVal)) {
+                daySelect.value = prevDayVal;
+            } else {
+                daySelect.value = String(currentDay);
+            }
+
+            // 填入付款人並連動分帳/代付/不分帳選項
+            const payerSelect = document.getElementById('exp-payer');
+            const prevPayer = payerSelect.value;
+            payerSelect.innerHTML = trip.buddies.map(b => `<option value="${b}">💳 ${b} 先付款墊付</option>`).join('');
+            if (prevPayer && trip.buddies.includes(prevPayer)) payerSelect.value = prevPayer;
+            syncSplitOptionsByPayer();
+
+            renderExpenseSummary();
+
+            // 計算分帳結算
             let paidMap = {}, shareMap = {};
             trip.buddies.forEach(b => { paidMap[b] = 0; shareMap[b] = 0; });
+
             trip.expenses.forEach(exp => {
-                paidMap[exp.payer] = (paidMap[exp.payer] || 0) + exp.amount;
-                if (exp.split === 'all') {
-                    const per = exp.amount / trip.buddies.length;
+                const amt = Number(exp.amount) || 0;
+                paidMap[exp.payer] = (paidMap[exp.payer] || 0) + amt;
+                if (!exp.split || exp.split === 'all') {
+                    const per = amt / trip.buddies.length;
                     trip.buddies.forEach(b => shareMap[b] += per);
-                } else { shareMap[exp.payer] = (shareMap[exp.payer] || 0) + exp.amount; }
+                } else if (exp.split === 'solo') {
+                    shareMap[exp.payer] = (shareMap[exp.payer] || 0) + amt;
+                } else if (exp.split.startsWith('treat:')) {
+                    const target = exp.split.split(':')[1];
+                    shareMap[target] = (shareMap[target] || 0) + amt;
+                }
             });
 
             document.getElementById('settlement-box').innerHTML = trip.expenses.length === 0 ?
@@ -1468,21 +1588,25 @@
                 trip.buddies.map(b => {
                     const diff = Math.round((paidMap[b] || 0) - (shareMap[b] || 0));
                     const hkdDiff = Math.round(Math.abs(diff) * trip.rateToHKD);
-                    if (diff > 0) return `<p class="text-emerald-700">🟢 <strong>${b}</strong> 應收回：<strong>${meta.symbol}${diff.toLocaleString()}</strong> (≈ HK$${hkdDiff})</p>`;
-                    if (diff < 0) return `<p class="text-rose-600">🔴 <strong>${b}</strong> 應支付：<strong>${meta.symbol}${Math.abs(diff).toLocaleString()}</strong> (≈ HK$${hkdDiff})</p>`;
+                    if (diff > 0) return `<p class="text-emerald-700">🟢 <strong>${b}</strong> 應收回：<strong>${meta.symbol}${diff.toLocaleString()}</strong> (≈ HK$${hkdDiff.toLocaleString()})</p>`;
+                    if (diff < 0) return `<p class="text-rose-600">🔴 <strong>${b}</strong> 應支付：<strong>${meta.symbol}${Math.abs(diff).toLocaleString()}</strong> (≈ HK$${hkdDiff.toLocaleString()})</p>`;
                     return `<p class="text-gray-500">⚪ <strong>${b}</strong> 已結清</p>`;
                 }).join('');
 
             document.getElementById('expense-list').innerHTML = trip.expenses.slice().reverse().map(exp => `
                 <div class="bg-white rounded-xl p-3 border border-[#EFECE6] flex justify-between items-start gap-2 text-xs">
                     <div class="min-w-0">
-                        <p class="font-bold text-[#3D3A36]">${exp.title}</p>
-                        <p class="text-[10px] text-gray-400">${exp.payer} 付款 ・ ${exp.split === 'all' ? '全員平分' : '各自負擔'}</p>
-                        ${exp.note ? `<p class="text-[10px] text-gray-500 mt-0.5">📝 ${exp.note}</p>` : ''}
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-[10px] bg-[#F8F4EC] text-[#3D3A36] px-2 py-0.5 rounded font-bold">${exp.category || '住宿其他'}</span>
+                            <span class="text-[10px] text-gray-400">${exp.dayLabel || ('Day ' + (exp.day || 1))}</span>
+                        </div>
+                        <p class="font-bold text-[#3D3A36] mt-1">${exp.title}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">${exp.payer} 先付 ・ ${formatSplitLabel(exp)}</p>
+                        ${exp.note ? `<p class="text-[10px] text-gray-400 mt-0.5">📝 ${exp.note}</p>` : ''}
                     </div>
                     <div class="text-right shrink-0 space-y-1">
-                        <p class="font-bold text-[#3D3A36]">${meta.symbol}${exp.amount.toLocaleString()}</p>
-                        <p class="text-[10px] text-gray-400">HK$${Math.round(exp.amount * trip.rateToHKD)}</p>
+                        <p class="font-bold text-[#3D3A36]">${meta.symbol}${Number(exp.amount).toLocaleString()}</p>
+                        <p class="text-[10px] text-gray-400">HK$${Math.round(exp.amount * trip.rateToHKD).toLocaleString()}</p>
                         <div class="flex items-center justify-end gap-2 text-[10px]">
                             <button onclick="editExpenseItem(${exp.id})" class="text-[#3A5A78] font-bold">編輯</button>
                             <button onclick="deleteExpenseItem(${exp.id})" class="text-rose-500 font-bold">刪除</button>
@@ -1493,18 +1617,23 @@
 
         function submitExpenseForm() {
             const trip = getActiveTrip();
+            const dayNum = parseInt(document.getElementById('exp-day').value, 10) || 1;
+            const dayObj = trip.days.find(d => d.day === dayNum);
+            const dayLabel = dayObj ? dayObj.label : `Day ${dayNum}`;
+            const category = document.getElementById('exp-category').value;
             const title = document.getElementById('exp-title').value.trim();
             const amount = parseFloat(document.getElementById('exp-amount').value);
             const payer = document.getElementById('exp-payer').value;
             const split = document.getElementById('exp-split').value;
             const note = document.getElementById('exp-note').value.trim();
             if (!title || isNaN(amount) || amount <= 0) return alert('請輸入項目與正確金額！');
+
             if (editingExpenseId) {
                 const exp = trip.expenses.find(e => e.id === editingExpenseId);
-                if (exp) Object.assign(exp, { title, amount, payer, split, note });
+                if (exp) Object.assign(exp, { day: dayNum, dayLabel, category, title, amount, payer, split, note });
                 cancelExpenseEdit();
             } else {
-                trip.expenses.push({ id: Date.now(), title, amount, payer, split, note });
+                trip.expenses.push({ id: Date.now(), day: dayNum, dayLabel, category, title, amount, payer, split, note });
                 document.getElementById('exp-title').value = '';
                 document.getElementById('exp-amount').value = '';
                 document.getElementById('exp-note').value = '';
@@ -1519,10 +1648,12 @@
             document.getElementById('exp-form-title').innerText = '✏️ 編輯消費紀錄';
             document.getElementById('exp-cancel-edit-btn').classList.remove('hidden');
             document.getElementById('exp-submit-btn').innerText = '💾 儲存修改';
+            document.getElementById('exp-day').value = String(exp.day || 1);
+            document.getElementById('exp-category').value = exp.category || '住宿其他';
             document.getElementById('exp-title').value = exp.title;
             document.getElementById('exp-amount').value = exp.amount;
             document.getElementById('exp-payer').value = exp.payer;
-            document.getElementById('exp-split').value = exp.split;
+            syncSplitOptionsByPayer(exp.split);
             document.getElementById('exp-note').value = exp.note || '';
         }
 
@@ -1534,6 +1665,7 @@
             document.getElementById('exp-title').value = '';
             document.getElementById('exp-amount').value = '';
             document.getElementById('exp-note').value = '';
+            syncSplitOptionsByPayer();
         }
 
         function deleteExpenseItem(id) {
@@ -1756,19 +1888,9 @@
             if (target === 'itinerary') {
                 const exp = smartExpandItinerary(text);
                 trip.itinerary.push({
-                    id: Date.now(),
-                    day: currentDay,
-                    type: exp.type,
-                    time: '彈性',
-                    duration: exp.duration,
-                    title: exp.title,
-                    naverQuery: exp.naverQuery,
-                    location: exp.location,
-                    lat: exp.lat,
-                    lng: exp.lng,
-                    transit: exp.transit,
-                    note: exp.note,
-                    comments: []
+                    id: Date.now(), day: currentDay, type: exp.type, time: '彈性', duration: exp.duration,
+                    title: exp.title, naverQuery: exp.naverQuery, location: exp.location,
+                    lat: exp.lat, lng: exp.lng, transit: exp.transit, note: exp.note, comments: []
                 });
                 saveStore(); renderItinerary(); switchTab('itinerary');
             } else {
